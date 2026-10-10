@@ -315,10 +315,9 @@ nav a .t{margin-left:auto;font-size:12px;color:var(--muted);font-weight:400}
       <a href="#ano">Despesas no ano</a>
       <a href="#futuro">Já lançado para 2027</a>
       <div class="sync" id="sync">
-        <div id="syncBox"><p class="nav-h">Seus dados</p>
-        <p class="sync-msg" id="syncMsg"><span class="dot"></span><span>Salvos neste aparelho.</span></p>
-        <button class="toggle" id="syncBtn" hidden>Sincronizar agora</button>
-        <button class="toggle" id="exportBtn" type="button">Copiar link para outro aparelho</button></div>
+        <div id="syncBox"><p class="nav-h">Planilha</p>
+        <p class="sync-msg" id="syncMsg"><span class="dot"></span><span>Conectando ao Google Drive…</span></p>
+        <button class="toggle" id="syncBtn" hidden>Sincronizar agora</button></div>
         <p class="nav-h">Tema</p>
         <div class="tema" role="group" aria-label="Tema"><button data-t="escuro" aria-pressed="true">Escuro</button><button data-t="claro" aria-pressed="false">Claro</button></div>
       </div>
@@ -450,18 +449,23 @@ nav a .t{margin-left:auto;font-size:12px;color:var(--muted);font-weight:400}
   </form>
 </dialog>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="config.js"></script>
 <script>
+// Versão GitHub Pages: os dados vêm do Apps Script do Gabriel (API privada com chave). O arquivo público não tem dados.
 (function(){
-  const h=location.hash;if(!h.startsWith("#dados="))return;
-  try{
-    const b=h.slice(7).replace(/-/g,"+").replace(/_/g,"/"), bin=atob(b), u8=Uint8Array.from(bin,c=>c.charCodeAt(0));
-    const d=JSON.parse(new TextDecoder().decode(u8));
-    if(d.plan)localStorage.setItem("gs26:plan",JSON.stringify(d.plan));
-    if(d.perfis)localStorage.setItem("gs26:perfis",JSON.stringify(d.perfis));
-    for(const [id,o] of Object.entries(d.docs||{}))localStorage.setItem(id==="gabriel"?"gs26:org":"gs26:org:"+id,JSON.stringify(o));
-    sessionStorage.setItem("gs26:importou","1");
-  }catch(e){sessionStorage.setItem("gs26:importou","erro")}
-  location.replace(location.pathname+"#geral");
+  const API=window.FINANCAS_API||"";
+  let t=null;try{const h=new URLSearchParams(location.hash.slice(1));if(h.get("chave")){t=h.get("chave");localStorage.setItem("gs26:chave",t);history.replaceState(null,"",location.pathname+"#geral")}else t=localStorage.getItem("gs26:chave")}catch(_){}
+  if(!API||!t){window.__semChave=true;return}
+  const get=(p)=>fetch(API+"?"+new URLSearchParams({...p,t})).then(r=>r.json()).then(j=>{if(!j.ok)throw {code:j.erro||"tool_error"};return j.v});
+  const post=(p)=>fetch(API,{method:"POST",body:JSON.stringify({...p,t})}).then(r=>r.json()).then(j=>{if(!j.ok)throw {code:j.erro||"tool_error"};return j.v});
+  function doc(k){return{
+    onSnapshot(cb,errCb){let parado=false,ult=null;
+      const tick=()=>get({api:"ler",k}).then(v=>{if(parado||v===ult)return;ult=v;let o=null;try{o=v?JSON.parse(v):null}catch(_){}cb({exists:!!o,data:()=>o})}).catch(e=>{if(errCb)errCb(e)});
+      tick();const iv=setInterval(()=>{if(!document.hidden)tick()},20000);
+      const vis=()=>{if(!document.hidden)tick()};document.addEventListener("visibilitychange",vis);
+      return()=>{parado=true;clearInterval(iv);document.removeEventListener("visibilitychange",vis)}},
+    set(d){return post({api:"salvar",k,json:JSON.stringify(d)})}}}
+  window.claude={use:async(n)=>n==="db"?{doc}:n==="mcp"?{callTool:async()=>({payload:await get({api:"planilha"}),cache:{storedAt:Date.now()}})}:null};
 })();
 </script>
 <script>
@@ -502,9 +506,6 @@ const stPlan=(c,i)=>(c.st&&c.st[i])==="pago"?"pago":"pendente";
 const stOf=(c,i)=>ORG.status[chave(c.n)+":"+i]||stPlan(c,i);
 let CONTAS=[];
 let PLAN={receita:RECEITA_BASE,oferta:OFERTA,ofertaSt:OFERTA_ST,contas:CONTAS,receitaNomes:RECEITA_NOMES};
-try{const pl=JSON.parse(localStorage.getItem("gs26:plan")||"null");if(pl&&Array.isArray(pl.contas)){const fit=(a,f)=>Array.from({length:NM},(_,i)=>a&&a[i]!=null?a[i]:f);
-  PLAN={receita:fit(pl.receita,0),oferta:fit(pl.oferta,0),ofertaSt:fit(pl.ofertaSt,null),receitaNomes:pl.receitaNomes||"—",contas:pl.contas.map(c=>({...c,v:fit(c.v,0),st:c.st?fit(c.st,null):undefined}))};
-  RECEITA_BASE=PLAN.receita;OFERTA=PLAN.oferta;OFERTA_ST=PLAN.ofertaSt;CONTAS=PLAN.contas;RECEITA_NOMES=PLAN.receitaNomes}}catch(_){}
 const HOJE=new Date();
 const MES_ATUAL=HOJE.getFullYear()===2026?HOJE.getMonth():(HOJE.getFullYear()>2026?11:0);
 CONTAS=arquivar(CONTAS);
@@ -926,7 +927,7 @@ function route(keep){
   if(!keep)window.scrollTo(0,0);
   if(v==="geral"){const box=$("#months"),b=box.querySelector(`[data-i="${sel}"]`);if(b)box.scrollLeft=b.offsetLeft-box.clientWidth/2+b.offsetWidth/2}
 }
-window.addEventListener("hashchange",()=>{if(location.hash.startsWith("#dados="))location.reload();else route()});
+window.addEventListener("hashchange",()=>{if(/^#(chave)=/.test(location.hash))location.reload();else route()});
 // Abas do app (celular)
 function folha(abrir){const side=$(".side");side.classList.toggle("open",abrir);$("#tabMais").setAttribute("aria-expanded",String(abrir));$("#sheetBg").hidden=!abrir;$("#menuBtn").setAttribute("aria-expanded",String(abrir))}
 $("#tabMais").addEventListener("click",()=>folha(!$(".side").classList.contains("open")));
@@ -941,7 +942,7 @@ renderNav();renderTotais();renderRegua();
 {const box=$("#months"),b=box.querySelector(`[data-i="${sel}"]`);if(b)box.scrollLeft=b.offsetLeft-box.clientWidth/2+b.offsetWidth/2;}
 renderMes();renderAno();renderDepois();renderPend();route();
 const COPIA_0510="";
-
+try{if(COPIA_0510&&typeof XLSX!=="undefined"){const d=lerXlsx(COPIA_0510);if(d)aplicar(d)}}catch(_){}
 
 // ---- Organizar contas: busca, categorias e arquivo, salvos no armazenamento da página ----
 let filtro="", orgDoc=null, fila=Promise.resolve(), excluindo=null;
@@ -1136,10 +1137,10 @@ function renderPerfis(){
     +(PERFIS.length>1?`<button class="pm-item" type="button" role="menuitemradio" aria-checked="${PERFIL===CASA.id}" data-perfil="${CASA.id}"><span class="av" aria-hidden="true">${PERFIS.length}</span><span>Casa (todos)</span>${PERFIL===CASA.id?`<span class="ok" aria-hidden="true">✓</span>`:""}</button>`:"")
     +`<div class="pm-sep" role="separator"></div><button class="pm-item pm-novo" type="button" role="menuitem" data-perfil="__novo"><span class="av" aria-hidden="true">+</span><span>Novo usuário</span></button>`;
   const casa=PERFIL===CASA.id, p=casa?CASA:PERFIS.find(x=>x.id===PERFIL)||PERFIS[0];$("#nomePerfil").textContent=p.nome;$("#avPerfil").textContent=casa?String(PERFIS.length):iniciais(p.nome);
-  $("#syncBox").hidden=false;document.body.classList.toggle("so-ver",casa);
+  $("#syncBox").hidden=PERFIL!=="gabriel";document.body.classList.toggle("so-ver",casa);
   if(casa)$("#fonte").textContent=`Soma de ${PERFIS.map(x=>x.nome).join(" e ")}. Para mudar algo, escolha um usuário no topo.`;
   else if(PERFIL!=="gabriel")$("#fonte").textContent=`Contas e receitas de ${p.nome}, lançadas no painel`;
-  else $("#fonte").textContent="A partir da planilha FINANCEIRO 2026 - GS";
+  else if(!/ao vivo/.test($("#fonte").textContent))$("#fonte").textContent="A partir da planilha FINANCEIRO 2026 - GS";
   document.title=PERFIL==="gabriel"?"Finanças 2026":`Finanças 2026 · ${p.nome}`;
 }
 function trocarPerfil(id){
@@ -1199,15 +1200,10 @@ renderContas();
     trocarPerfil(PERFIL);
   }catch(_){dbApi=null;orgDoc=null}
 })();
-syncMsg("ok","Salvos neste aparelho.",false);
-$("#syncBox").hidden=false;
-$("#exportBtn").onclick=async()=>{
-  const docs={};for(const p of PERFIS){try{const o=JSON.parse(localStorage.getItem(p.id==="gabriel"?"gs26:org":"gs26:org:"+p.id)||"null");if(o)docs[p.id]=o}catch(_){}}
-  let plan=null;try{plan=JSON.parse(localStorage.getItem("gs26:plan")||"null")}catch(_){}
-  const bytes=new TextEncoder().encode(JSON.stringify({perfis:PERFIS,docs,plan}));let bin="";bytes.forEach(b=>bin+=String.fromCharCode(b));
-  const link=location.origin+location.pathname+"#dados="+btoa(bin).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
-  try{await navigator.clipboard.writeText(link);msgSalvo("Link copiado. Abra no outro aparelho para levar seus dados. Não compartilhe com ninguém.")}
-  catch(_){prompt("Copie este link e abra no outro aparelho:",link)}};
-{const im=sessionStorage.getItem("gs26:importou");if(im){sessionStorage.removeItem("gs26:importou");setTimeout(()=>msgSalvo(im==="erro"?"Não consegui ler o link de dados. Peça um novo ao Claude.":"Seus dados foram carregados neste aparelho."),300)}}
-
+syncMsg("","Lendo a planilha no Google Drive…",false);
+(async()=>{
+  try{mcpApi=window.claude?.use?await window.claude.use("mcp"):null}catch(_){mcpApi=null}
+  if(!mcpApi){syncMsg("","Abra o link com a chave que o Claude enviou para ver seus dados.",false);return}
+  sincronizar();
+})();
 </script>

@@ -1,5 +1,5 @@
 # Finanças
 
-Painel financeiro pessoal (página estática).
+Painel financeiro pessoal publicado pelo GitHub Pages.
 
-Este repositório não guarda nenhum dado financeiro. Os dados ficam apenas no navegador de cada aparelho (localStorage) e chegam até ele por um link pessoal com `#dados=...`, que nunca é enviado ao servidor.
+Este repositório não guarda nenhum dado financeiro. Ao abrir, a página busca contas, pagamentos e lançamentos num Google Apps Script privado, que só responde com a chave certa. A chave fica apenas no navegador de quem abriu o link pessoal.

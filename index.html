@@ -465,6 +465,7 @@ nav a .t{margin-left:auto;font-size:12px;color:var(--muted);font-weight:400}
       const vis=()=>{if(!document.hidden)tick()};document.addEventListener("visibilitychange",vis);
       return()=>{parado=true;clearInterval(iv);document.removeEventListener("visibilitychange",vis)}},
     set(d){return post({api:"salvar",k,json:JSON.stringify(d)})}}}
+  window.__copia={ler:()=>get({api:"ler",k:"config/plano"}).then(v=>v?JSON.parse(v):null),salvar:(o)=>post({api:"salvar",k:"config/plano",json:JSON.stringify(o)})};
   window.claude={use:async(n)=>n==="db"?{doc}:n==="mcp"?{callTool:async()=>({payload:await get({api:"planilha"}),cache:{storedAt:Date.now()}})}:null};
 })();
 </script>
@@ -825,12 +826,16 @@ async function sincronizar(){
     const d=lerXlsx(b64);
     if(!d)throw {code:"formato"};
     aplicar(d);
+    try{if(window.__copia)window.__copia.salvar(d).catch(()=>{})}catch(_){}
     if(PERFIL!=="gabriel")return;
     const quando=hora(res.cache?.storedAt??Date.now());
     syncMsg("ok",`Sincronizado com a planilha em ${quando}`,true);
     $("#fonte").textContent=`Dados ao vivo da planilha ${String(p.title||"FINANCEIRO 2026 - GS").replace(/\.xlsx$/i,"")}, lidos em ${quando}`;
   }catch(e){
     const c=e&&e.code;
+    try{const d=window.__copia?await window.__copia.ler():null;if(d&&Array.isArray(d.contas)){aplicar(d);
+      syncMsg("err","Mostrando a última cópia da planilha. O Apps Script ainda não tem permissão para abrir o Google Drive.",true);
+      $("#fonte").textContent="Cópia salva da planilha FINANCEIRO 2026 - GS";return}}catch(_){}
     const msg={
       needs_reauth:"A conexão com o Google Drive expirou. Reconecte em Configurações > Conectores no claude.ai.",
       server_not_connected:"Conecte o Google Drive em Configurações > Conectores no claude.ai para ver os dados ao vivo.",

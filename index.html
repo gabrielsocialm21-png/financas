@@ -468,6 +468,15 @@ body:not(.casa) .so-casa{display:none!important}
   .plform{grid-template-columns:1fr 1fr}
   .plform .nome-pl{grid-column:1/-1}
 }
+
+/* ===== Planejador com contas (v31) ===== */
+.dono{display:inline-block;font-size:11px;font-weight:700;padding:1px 8px;border-radius:999px;border:1px solid var(--line);color:var(--ink-2);margin-left:6px;vertical-align:1px;white-space:nowrap}
+button.dono{appearance:none;background:none;font-family:inherit;cursor:pointer;touch-action:manipulation}
+button.dono:hover{border-color:var(--ink-2);color:var(--ink)}
+.plgrp{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-top:6px}
+.plgrp h4{margin:0;font-size:15px}
+.plgrp .tbtn{font-size:13px;font-weight:700}
+@media (min-width:861px){.plform{grid-template-columns:2fr repeat(5,minmax(0,1fr))}}
 </style>
 
 <div class="app">
@@ -1522,7 +1531,8 @@ function renderCasa(){const el=$("#casaView");if(!el||!CASA_P.length)return;
   if(!meses.includes(casaSel))casaSel=meses.find(i=>i>=MES_ATUAL)??meses[meses.length-1]??MES_ATUAL;
   const i=casaSel, juntos=soma("sobra",i), inv=soma("inv",i);
   const g=CASA_DOC&&CASA_DOC.guardado!=null&&isFinite(Number(CASA_DOC.guardado))?Number(CASA_DOC.guardado):null, em=g!=null?Number(CASA_DOC.em)||0:MES_ATUAL;
-  const PL=planos(), pl=(k)=>PL.filter(x=>x.on!==false).reduce((a,x)=>a+parcelaEm(x,k),0), sj=(k)=>soma("sobra",k)+pl(k);
+  const PL=planos(), pl=(k)=>PL.filter(x=>x.on!==false).reduce((a,x)=>a+parcelaEm(x,k),0), FORA=CASA_DOC?.fora||{};
+  const foraSum=(k)=>P.reduce((a,p)=>a+p.lista.filter(c=>FORA[p.id+"|"+c.k+"|"+k]).reduce((b,c)=>b+c.v[k],0),0), sj=(k)=>soma("sobra",k)+pl(k)+foraSum(k);
   // Projeção: o guardado informado + o que sobra e o que é investido em cada mês seguinte.
   const prev={};let acc=g??0;for(const k of meses){if(k>em){acc+=sj(k)+soma("inv",k);prev[k]=acc}}
   const prev0={};{let a=g??0;for(const k of meses)if(k>em){a+=soma("sobra",k)+soma("inv",k);prev0[k]=a}}
@@ -1547,16 +1557,16 @@ function renderCasa(){const el=$("#casaView");if(!el||!CASA_P.length)return;
       <div class="pessoas">${P.map(p=>`<div class="pessoa"><h4>${esc(p.nome)}</h4>
         <dl><dt>Entrou</dt><dd>${brl.format(p.entrou[i])}</dd><dt>Contas</dt><dd>− ${brl.format(p.saiu[i])}</dd><dt>Investido</dt><dd>− ${brl.format(p.inv[i])}</dd><dt class="tot">Sobrou</dt><dd class="tot${cl(p.sobra[i])}">${brl.format(p.sobra[i])}</dd></dl></div>`).join("")}</div>
     </section>
-    ${painelPlanos(meses,PL,pl,sj,prev,prev0,soma)}
+    ${painelPlanos(meses,PL,pl,sj,prev,prev0,soma,i,P,FORA,foraSum)}
     <section class="panel mm" aria-labelledby="mmT">
-      <div class="panel-head"><h3 id="mmT">Mês a mês</h3><span class="sub">${PL.some(x=>x.on!==false)?"Sobra juntos com os planos":"Sobra juntos"} · guardado previsto</span></div>
-      <ul class="bills">${meses.map(k=>`<li><div class="bill"><span class="nm"><i style="background:${sj(k)<0?"var(--crit)":"var(--accent)"}"></i><span>${nomeMesC(k)} <small>${P.map(p=>`${esc(p.dono)} ${brl0.format(p.sobra[k])}`).join(" · ")}${soma("inv",k)?` · investido ${brl0.format(soma("inv",k))}`:""}${pl(k)?` · planos ${pl(k)>0?"+":"−"}${brl0.format(Math.abs(pl(k)))}`:""}</small></span></span>
+      <div class="panel-head"><h3 id="mmT">Mês a mês</h3><span class="sub">${PL.some(x=>x.on!==false)||Object.keys(FORA).length?"Sobra juntos com o planejamento":"Sobra juntos"} · guardado previsto</span></div>
+      <ul class="bills">${meses.map(k=>`<li><div class="bill"><span class="nm"><i style="background:${sj(k)<0?"var(--crit)":"var(--accent)"}"></i><span>${nomeMesC(k)} <small>${P.map(p=>`${esc(p.dono)} ${brl0.format(p.sobra[k])}`).join(" · ")}${soma("inv",k)?` · investido ${brl0.format(soma("inv",k))}`:""}${pl(k)?` · planos ${pl(k)>0?"+":"−"}${brl0.format(Math.abs(pl(k)))}`:""}${foraSum(k)?` · ${brl0.format(foraSum(k))} em contas tiradas`:""}</small></span></span>
         <span class="v${cl(sj(k))}">${brl.format(sj(k))}</span>${k in prev?`<span class="v">${brl0.format(prev[k])}<small>guardado</small></span>`:`<span class="v" aria-hidden="true"></span>`}</div></li>`).join("")}
-        <li class="tot"><div class="bill"><span class="nm"><span>Total de 2026 <small>${P.map(p=>`${esc(p.dono)} ${brl0.format(ano.reduce((a,j)=>a+p.sobra[j],0))}`).join(" · ")} · investido ${brl0.format(sAno("inv"))}</small></span></span><span class="v${cl(sAno("sobra")+ano.reduce((a,j)=>a+pl(j),0))}">${brl.format(sAno("sobra")+ano.reduce((a,j)=>a+pl(j),0))}</span><span class="v"></span></div></li></ul>
+        <li class="tot"><div class="bill"><span class="nm"><span>Total de 2026 <small>${P.map(p=>`${esc(p.dono)} ${brl0.format(ano.reduce((a,j)=>a+p.sobra[j],0))}`).join(" · ")} · investido ${brl0.format(sAno("inv"))}</small></span></span><span class="v${cl(ano.reduce((a,j)=>a+sj(j),0))}">${brl.format(ano.reduce((a,j)=>a+sj(j),0))}</span><span class="v"></span></div></li></ul>
     </section>`;
 }
 $("#casaView").addEventListener("click",(e)=>{
-  const c=e.target.closest("[data-cmes]");if(c){casaSel=Number(c.dataset.cmes);renderCasa();const b=$("#casaView").querySelector(`[data-cmes="${casaSel}"]`);if(b)b.focus();return}
+  const c=e.target.closest("[data-cmes]");if(c){casaSel=Number(c.dataset.cmes);if(casaSel>=MES_ATUAL)plRasc.mes=String(casaSel);renderCasa();const b=$("#casaView").querySelector(`[data-cmes="${casaSel}"]`);if(b)b.focus();return}
   if(e.target.closest("#gEdit")){casaEdit=true;renderCasa();$("#gVal").focus();return}
   if(e.target.closest("#gCanc")){casaEdit=false;renderCasa()}});
 $("#casaView").addEventListener("submit",async(e)=>{e.preventDefault();if(e.target.id==="plForm"){addPlano();return}const v=numBR($("#gVal").value);
@@ -1569,7 +1579,7 @@ $("#casaView").addEventListener("submit",async(e)=>{e.preventDefault();if(e.targ
 const planos=()=>Array.isArray(CASA_DOC?.planos)?CASA_DOC.planos.filter(x=>x&&x.id&&x.nome&&Number(x.valor)>0):[];
 const parcelaEm=(x,k)=>k>=Number(x.mes)&&k<Number(x.mes)+(Number(x.parc)||1)?(x.tipo==="entrada"?1:-1)*Number(x.valor):0;
 const mesC=(k)=>k>=NM?"depois de dez/27":k<12?MESES[k].slice(0,3).toLowerCase():MESES[k-12].slice(0,3).toLowerCase()+"/27";
-let plRasc={nome:"",valor:"",mes:"",parc:"1",tipo:"gasto",metaV:"",metaAte:""};
+let plRasc={nome:"",valor:"",mes:"",parc:"1",tipo:"gasto",quem:"casa",metaV:"",metaAte:""};
 try{plRasc={...plRasc,...JSON.parse(localStorage.getItem("gs26:plRasc")||"{}")}}catch(_){}
 const guardaRasc=()=>{try{localStorage.setItem("gs26:plRasc",JSON.stringify(plRasc))}catch(_){}};
 async function salvarCasa(t){try{localStorage.setItem("gs26:casa",JSON.stringify(CASA_DOC))}catch(_){}renderCasa();
@@ -1581,31 +1591,49 @@ function metaTxt(meses,sj,soma){const v=numBR(plRasc.metaV),ate=Number(plRasc.me
   const n=ks.length, por=v/n, disp=ks.reduce((a,k)=>a+sj(k)+soma("inv",k),0), med=disp/n;
   return `Para juntar <b>${brl.format(v)}</b> até ${nomeMesC(ate).toLowerCase()}, vocês precisam separar <b>${brl.format(por)} por mês</b> durante ${n} ${n===1?"mês":"meses"}. `+
     (disp>=v?`Pela previsão, sobram ${brl.format(med)} por mês nesse período, então <b>dá</b> e ainda ficam ${brl.format(disp-v)}.`:`Pela previsão, sobram só ${brl.format(Math.max(0,med))} por mês nesse período. <b class="neg">Faltam ${brl.format(v-Math.max(0,disp))}</b>: cortem gastos ou estendam o prazo.`)}
-function painelPlanos(meses,PL,pl,sj,prev,prev0,soma){
+const quemNome=(q)=>q&&q!=="casa"?(CASA_P.find(p=>p.id===q)?.dono||"Casa"):"Casa";
+function painelPlanos(meses,PL,pl,sj,prev,prev0,soma,i,P,FORA,foraSum){
   const fut=meses.filter(k=>k>=MES_ATUAL), ativos=PL.filter(x=>x.on!==false);
   const gastos=ativos.filter(x=>x.tipo!=="entrada").reduce((a,x)=>a+x.valor*(Number(x.parc)||1),0), entradas=ativos.filter(x=>x.tipo==="entrada").reduce((a,x)=>a+x.valor*(Number(x.parc)||1),0);
   const pior=fut.reduce((m,k)=>m==null||sj(k)<sj(m)?k:m,null), fim=fut.filter(k=>k in prev).pop();
-  if(plRasc.mes===""||!fut.includes(Number(plRasc.mes)))plRasc.mes=String(fut.find(k=>k>MES_ATUAL)??MES_ATUAL);
+  if(plRasc.mes===""||!fut.includes(Number(plRasc.mes)))plRasc.mes=String(fut.includes(i)?i:fut.find(k=>k>MES_ATUAL)??MES_ATUAL);
   if(plRasc.metaAte===""||!fut.includes(Number(plRasc.metaAte)))plRasc.metaAte=String(fut.filter(k=>k<12).pop()??fut[fut.length-1]??MES_ATUAL);
   const opt=(ks,v)=>ks.map(k=>`<option value="${k}"${String(k)===String(v)?" selected":""}>${nomeMesC(k)}</option>`).join("");
+  const doMes=PL.filter(x=>parcelaEm(x,i)), outros=PL.filter(x=>!parcelaEm(x,i));
+  const plMes=pl(i), entra=soma("entrou",i)+doMes.filter(x=>x.on!==false&&x.tipo==="entrada").reduce((a,x)=>a+x.valor,0);
+  const linhaPlano=(x,emMes)=>{const on=x.on!==false;return `<li><div class="bill${on?"":" off"}"><span class="nm"><i style="background:${x.tipo==="entrada"?"var(--good)":"var(--warn)"}"></i><span>${esc(x.nome)}<button class="dono" type="button" data-plquem="${esc(x.id)}" title="Trocar de quem é" aria-label="${esc(x.nome)} é de ${esc(quemNome(x.quem))}. Toque para trocar">${esc(quemNome(x.quem))}</button> <small>${x.tipo==="entrada"?"Entrada":"Gasto"} · ${descPlano(x)}${on?"":" · fora da simulação"}</small></span></span>
+      <span class="v">${x.tipo==="entrada"?"+":"−"} ${brl.format(emMes?x.valor:x.valor*(Number(x.parc)||1))}</span>
+      <span class="acts"><button class="ib ${on?"on":"ok"}" type="button" data-plon="${esc(x.id)}" aria-pressed="${on}" aria-label="${on?"Tirar da simulação":"Incluir na simulação"} ${esc(x.nome)}" title="${on?"Incluído · toque para tirar":"Incluir"}">${IC.check}</button><button class="ib del" type="button" data-plrm="${esc(x.id)}" aria-label="Apagar ${esc(x.nome)}" title="Apagar">${IC.trash}</button></span></div></li>`};
+  const contasP=P.map(p=>{const cs=p.lista.filter(c=>c.v[i]>0).sort((a,b)=>b.v[i]-a.v[i]);if(!cs.length)return "";
+    const fora=cs.filter(c=>FORA[p.id+"|"+c.k+"|"+i]), tot=cs.reduce((a,c)=>a+c.v[i],0)-fora.reduce((a,c)=>a+c.v[i],0);
+    return `<div class="plgrp"><h4>Contas de ${esc(p.dono)} · ${brl.format(tot)}</h4><button class="tbtn" type="button" data-ctodas="${esc(p.id)}" data-on="${fora.length?"1":"0"}">${fora.length?"Incluir todas":"Tirar todas"}</button></div>
+      <ul class="bills">${cs.map(c=>{const key=p.id+"|"+c.k+"|"+i, on=!FORA[key];return `<li><div class="bill${on?"":" off"}"><span class="nm"><i style="background:var(--out)"></i><span>${esc(c.n)}<span class="dono">${esc(p.dono)}</span> <small>${on?"Conta que já existe":"Fora da simulação"}</small></span></span>
+        <span class="v">− ${brl.format(c.v[i])}</span><span class="acts"><button class="ib ${on?"on":"ok"}" type="button" data-cfora="${esc(key)}" aria-pressed="${on}" aria-label="${on?"Tirar da simulação":"Incluir na simulação"} ${esc(c.n)} de ${esc(p.dono)}" title="${on?"Incluída · toque para tirar":"Incluir"}">${IC.check}</button></span></div></li>`}).join("")}</ul>`}).join("");
   return `<section class="panel" aria-labelledby="plT">
-    <div class="panel-head"><h3 id="plT">Planejar os próximos meses</h3><span class="sub">Simule contas e entradas futuras. Nada aqui muda as contas de cada um.</span></div>
+    <div class="panel-head"><h3 id="plT">Planejar ${nomeMes(i).toLowerCase()}</h3><span class="sub">Inclua ou tire contas e lance planos. Nada aqui muda as contas de cada um.</span></div>
+    <div class="chips" role="group" aria-label="Mês do planejamento">${meses.filter(k=>k>=MES_ATUAL).map(k=>`<button class="chip" type="button" data-cmes="${k}" aria-pressed="${k===i}">${mesC(k)}</button>`).join("")}</div>
+    <div class="plres">
+      <div><span>Entra</span><b>${brl.format(entra)}</b><small>${P.map(p=>`${esc(p.dono)} ${brl0.format(p.entrou[i])}`).join(" · ")}</small></div>
+      <div><span>Sai</span><b>${brl.format(entra-sj(i))}</b><small>Contas incluídas, planos e investimentos</small></div>
+      <div><span>Sobra simulada</span><b class="${sj(i)<0?"neg":""}">${brl.format(sj(i))}</b><small>Sem mexer em nada: ${brl0.format(soma("sobra",i))}</small></div>
+    </div>
     <form id="plForm" class="plform" autocomplete="off">
-      <label class="lbl nome-pl">O que é<input class="campo" id="plNome" maxlength="40" placeholder="Ex.: Viagem, sofá, IPVA, 13º" value="${esc(plRasc.nome)}"></label>
+      <label class="lbl nome-pl">Nova conta ou entrada<input class="campo" id="plNome" maxlength="40" placeholder="Ex.: Aluguel, viagem, 13º" value="${esc(plRasc.nome)}"></label>
+      <label class="lbl">De quem<select class="campo" id="plQuem"><option value="casa">Casa</option>${P.map(p=>`<option value="${esc(p.id)}"${plRasc.quem===p.id?" selected":""}>${esc(p.dono)}</option>`).join("")}</select></label>
       <label class="lbl">Tipo<select class="campo" id="plTipo"><option value="gasto"${plRasc.tipo!=="entrada"?" selected":""}>Gasto</option><option value="entrada"${plRasc.tipo==="entrada"?" selected":""}>Entrada</option></select></label>
       <label class="lbl">Valor da parcela<input class="campo" id="plValor" inputmode="decimal" placeholder="500,00" value="${esc(plRasc.valor)}"></label>
       <label class="lbl">Começa em<select class="campo" id="plMes">${opt(fut,plRasc.mes)}</select></label>
       <label class="lbl">Parcelas<select class="campo" id="plParc">${Array.from({length:Math.max(1,NM-Number(plRasc.mes))},(_,k)=>`<option value="${k+1}"${String(k+1)===String(plRasc.parc)?" selected":""}>${k?`${k+1}x`:"À vista"}</option>`).join("")}</select></label>
-      <div class="acoes-pl"><span class="sub" id="plPrev"></span><button class="btn" type="submit">Adicionar ao plano</button></div>
+      <div class="acoes-pl"><span class="sub">Fica só no planejamento.</span><button class="btn" type="submit">Adicionar ao plano</button></div>
     </form>
-    ${PL.length?`<ul class="bills">${PL.map(x=>{const on=x.on!==false;return `<li><div class="bill${on?"":" off"}"><span class="nm"><i style="background:${x.tipo==="entrada"?"var(--good)":"var(--warn)"}"></i><span>${esc(x.nome)} <small>${x.tipo==="entrada"?"Entrada":"Gasto"} · ${descPlano(x)}${on?"":" · fora do cálculo"}</small></span></span>
-      <span class="v">${x.tipo==="entrada"?"+":"−"} ${brl.format(x.valor*(Number(x.parc)||1))}</span>
-      <span class="acts"><button class="ib ${on?"on":"ok"}" type="button" data-plon="${esc(x.id)}" aria-pressed="${on}" aria-label="${on?"Tirar do cálculo":"Pôr no cálculo"} ${esc(x.nome)}" title="${on?"No cálculo · toque para tirar":"Pôr no cálculo"}">${IC.check}</button><button class="ib del" type="button" data-plrm="${esc(x.id)}" aria-label="Remover ${esc(x.nome)}" title="Remover">${IC.trash}</button></span></div></li>`}).join("")}</ul>`
-      :`<p class="sub">Adicione o que vocês pretendem gastar ou receber, como uma viagem em janeiro ou um móvel em 10x, para ver como fica cada mês.</p>`}
-    ${ativos.length?`<div class="plres">
-      <div><span>No plano</span><b>${brl.format(entradas-gastos)}</b><small>${gastos?`${brl0.format(gastos)} em gastos`:""}${gastos&&entradas?" · ":""}${entradas?`${brl0.format(entradas)} em entradas`:""}</small></div>
+    <div class="plgrp"><h4>Planos de ${nomeMes(i).toLowerCase()}${doMes.length?` · ${plMes>=0?"+":"−"} ${brl.format(Math.abs(plMes))}`:""}</h4></div>
+    ${doMes.length?`<ul class="bills">${doMes.map(x=>linhaPlano(x,true)).join("")}</ul>`:`<p class="sub">Nenhum plano neste mês. Use o formulário acima para lançar um aluguel, uma viagem ou um 13º.</p>`}
+    ${contasP}
+    ${outros.length?`<details><summary style="cursor:pointer;font-weight:700">Planos em outros meses (${outros.length})</summary><ul class="bills" style="margin-top:8px">${outros.map(x=>linhaPlano(x,false)).join("")}</ul></details>`:""}
+    ${ativos.length||Object.keys(FORA).length?`<div class="plres">
+      ${ativos.length?`<div><span>Todos os planos</span><b>${brl.format(entradas-gastos)}</b><small>${gastos?`${brl0.format(gastos)} em gastos`:""}${gastos&&entradas?" · ":""}${entradas?`${brl0.format(entradas)} em entradas`:""}</small></div>`:""}
       ${pior!=null?`<div><span>Mês mais apertado</span><b class="${sj(pior)<0?"neg":""}">${brl.format(sj(pior))}</b><small>${nomeMesC(pior)}${sj(pior)<0?", falta dinheiro":""}</small></div>`:""}
-      ${fim!=null?`<div><span>Guardado em ${mesC(fim)}</span><b>${brl.format(prev[fim])}</b><small>Sem os planos: ${brl0.format(prev0[fim])}</small></div>`:""}
+      ${fim!=null?`<div><span>Guardado em ${mesC(fim)}</span><b>${brl.format(prev[fim])}</b><small>Sem o planejamento: ${brl0.format(prev0[fim])}</small></div>`:""}
     </div>`:""}
     <div style="display:grid;gap:10px;border-top:1px solid var(--line);padding-top:14px">
       <h4 style="margin:0;font-size:15px">Meta: quanto juntar</h4>
@@ -1617,16 +1645,21 @@ function painelPlanos(meses,PL,pl,sj,prev,prev0,soma){
 function addPlano(){const nome=$("#plNome").value.replace(/[<>&"]/g,"").trim(),valor=numBR($("#plValor").value);
   if(!nome){msgSalvo("Escreva o que é, por exemplo Viagem.",true);$("#plNome").focus();return}
   if(!isFinite(valor)||valor<=0){msgSalvo("Digite o valor da parcela como 500,00.",true);$("#plValor").focus();return}
-  const x={id:"p"+Date.now().toString(36),nome,tipo:$("#plTipo").value,valor,mes:Number($("#plMes").value),parc:Math.min(Number($("#plParc").value)||1,NM-Number($("#plMes").value)),on:true};
+  const x={id:"p"+Date.now().toString(36),nome,tipo:$("#plTipo").value,valor,mes:Number($("#plMes").value),parc:Math.min(Number($("#plParc").value)||1,NM-Number($("#plMes").value)),quem:$("#plQuem").value||"casa",on:true};
   CASA_DOC={...(CASA_DOC||{}),planos:[...planos(),x]};plRasc={...plRasc,nome:"",valor:"",parc:"1"};guardaRasc();
   salvarCasa(`${nome} entrou no plano: ${descPlano(x)}.`)}
 $("#casaView").addEventListener("input",(e)=>{const m={plNome:"nome",plValor:"valor",metaV:"metaV"}[e.target.id];if(!m)return;plRasc[m]=e.target.value;guardaRasc();
   if(m==="metaV")renderCasa(),(()=>{const f=$("#metaV");f.focus();f.setSelectionRange(f.value.length,f.value.length)})()});
-$("#casaView").addEventListener("change",(e)=>{const m={plTipo:"tipo",plMes:"mes",plParc:"parc",metaAte:"metaAte"}[e.target.id];if(!m)return;plRasc[m]=e.target.value;guardaRasc();
+$("#casaView").addEventListener("change",(e)=>{const m={plTipo:"tipo",plMes:"mes",plParc:"parc",metaAte:"metaAte",plQuem:"quem"}[e.target.id];if(!m)return;plRasc[m]=e.target.value;guardaRasc();
   if(m==="mes"&&Number(plRasc.parc)>NM-Number(plRasc.mes))plRasc.parc=String(NM-Number(plRasc.mes));
   if(m==="metaAte"||m==="mes"){renderCasa();$("#"+e.target.id).focus()}});
 $("#casaView").addEventListener("click",(e)=>{
   const t=e.target.closest("[data-plon]");if(t){CASA_DOC={...CASA_DOC,planos:planos().map(x=>x.id===t.dataset.plon?{...x,on:x.on===false}:x)};const x=planos().find(y=>y.id===t.dataset.plon);salvarCasa(x.on===false?`${x.nome} saiu do cálculo.`:`${x.nome} voltou ao cálculo.`);return}
+  const f=e.target.closest("[data-cfora]");if(f){const k=f.dataset.cfora,fo={...(CASA_DOC?.fora||{})};if(fo[k])delete fo[k];else fo[k]=true;CASA_DOC={...(CASA_DOC||{}),fora:fo};salvarCasa(fo[k]?"Conta tirada da simulação.":"Conta incluída de novo.");return}
+  const ct=e.target.closest("[data-ctodas]");if(ct){const p=CASA_P.find(x=>x.id===ct.dataset.ctodas);if(!p)return;const fo={...(CASA_DOC?.fora||{})},incluir=ct.dataset.on==="1";
+    for(const c of p.lista)if(c.v[casaSel]>0){const k=p.id+"|"+c.k+"|"+casaSel;if(incluir)delete fo[k];else fo[k]=true}
+    CASA_DOC={...(CASA_DOC||{}),fora:fo};salvarCasa(incluir?`Contas de ${p.dono} incluídas.`:`Contas de ${p.dono} tiradas da simulação.`);return}
+  const q=e.target.closest("[data-plquem]");if(q){const ord=["casa",...CASA_P.map(p=>p.id)];CASA_DOC={...CASA_DOC,planos:planos().map(x=>x.id===q.dataset.plquem?{...x,quem:ord[(ord.indexOf(x.quem||"casa")+1)%ord.length]}:x)};const x=planos().find(y=>y.id===q.dataset.plquem);salvarCasa(`${x.nome} agora é de ${quemNome(x.quem)}.`);return}
   const r=e.target.closest("[data-plrm]");if(r){const x=planos().find(y=>y.id===r.dataset.plrm);CASA_DOC={...CASA_DOC,planos:planos().filter(y=>y.id!==r.dataset.plrm)};salvarCasa(x?`${x.nome} removido do plano.`:"")}});
 const chaveLocal=()=>PERFIL==="gabriel"?"gs26:org":"gs26:org:"+PERFIL;
 const docDe=(id)=>id==="gabriel"?"config/organizacao":"config/perfil-"+id;
@@ -1643,7 +1676,8 @@ function montarCasa(){
     const dono=p.nome.split(/\s+/)[0], contas=arquivar(CONTAS).map(c=>({n:`${c.n} · ${dono}`,c:BASE_CATS.some(x=>x.id===c.c)?c.c:"outros",fixo:true,dia:c.dia,info:c.info,v:c.v.slice(),st:c.v.map((_,i)=>stOf(c,i))}));
     const arqP=ORG.mesesArq, on=(i)=>!(i<12&&arqP.includes(i)), ct=arquivar(CONTAS);
     const entrou=RECEITA.map((v,i)=>on(i)?v:0), saiu=Array.from({length:NM},(_,i)=>on(i)?ct.reduce((a,c)=>a+c.v[i],0)+OFERTA[i]:0), inv=Array.from({length:NM},(_,i)=>on(i)?investMes(i):0);
-    return {id:p.id,nome:p.nome,dono,entrou,saiu,inv,sobra:entrou.map((v,i)=>v-saiu[i]-inv[i]),contas,receita:RECEITA.slice(),oferta:OFERTA.slice(),invest:ORG.lanc.filter(l=>l.tipo==="invest"),arq:ORG.mesesArq,meta:ORG.meta||0}});
+    const lista=[...ct.filter(c=>c.v.some(x=>x>0)).map(c=>({k:chave(c.n),n:c.n,v:c.v.map((x,i)=>on(i)?x:0)})),...(OFERTA.some(x=>x>0)?[{k:"oferta",n:"Oferta",v:OFERTA.map((x,i)=>on(i)?x:0)}]:[])];
+    return {id:p.id,nome:p.nome,dono,lista,entrou,saiu,inv,sobra:entrou.map((v,i)=>v-saiu[i]-inv[i]),contas,receita:RECEITA.slice(),oferta:OFERTA.slice(),invest:ORG.lanc.filter(l=>l.tipo==="invest"),arq:ORG.mesesArq,meta:ORG.meta||0}});
   CASA_P=partes;
   PERFIL="__todos";
   ORG={cats:[],atrib:{},status:{},extras:[],dias:{},meta:partes.reduce((a,x)=>a+x.meta,0),receitaFixa:null,

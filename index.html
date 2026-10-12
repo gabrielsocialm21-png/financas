@@ -2,18 +2,20 @@
 <html lang="pt-BR">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Finanças GS 2026</title>
+<title>Sobra · Finanças</title>
 <meta name="theme-color" content="#0c0e0d">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Finanças">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%230c0e0d'/%3E%3Crect x='14' y='30' width='9' height='20' rx='3' fill='%23c4f26b'/%3E%3Crect x='28' y='20' width='9' height='30' rx='3' fill='%23c4f26b'/%3E%3Crect x='42' y='12' width='9' height='38' rx='3' fill='%23c4f26b' opacity='.55'/%3E%3C/svg%3E">
-<meta name="description" content="Painel financeiro pessoal">
+<meta name="apple-mobile-web-app-title" content="Sobra">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/logo.svg" type="image/svg+xml">
+<meta name="description" content="Sobra: contas, receitas e o que sobra no fim do mês.">
 <meta name="robots" content="noindex,nofollow">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Manrope:wght@400;500;600;700;800&display=swap">
 <style>
 /* Layout: régua do ano (12 meses) como herói e seletor; abaixo, o mês escolhido (resumo, categorias, contas) e o ano por categoria. */
 :root{
@@ -291,14 +293,115 @@ nav a .t{margin-left:auto;font-size:12px;color:var(--muted);font-weight:400}
   .wrap{padding-inline:16px}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* ===== Sobra: identidade e diagramação (v26) ===== */
+:root{--display:"Bricolage Grotesque","Manrope",system-ui,sans-serif;--r:18px}
+body{-webkit-font-smoothing:antialiased}
+h1{font-size:clamp(28px,3.6vw,38px);font-weight:700;letter-spacing:-.03em}
+h2{letter-spacing:-.02em}
+h3{font-size:16px;letter-spacing:-.01em}
+header .sub{max-width:60ch;margin-top:6px}
+.fig b,.ytot b{font-family:var(--body);font-weight:800;letter-spacing:-.025em}
+.fig span{font-weight:600}
+.panel,.fig,.ruler{border-radius:var(--r)}
+.panel{padding:20px 22px;gap:16px}
+.logo{display:flex;align-items:center;gap:10px;color:var(--ink);text-decoration:none;padding:0 6px 4px;min-width:0}
+.logo svg{width:32px;height:32px;flex:none}
+.logo b{display:block;font-family:var(--display);font-size:23px;font-weight:700;letter-spacing:-.04em;line-height:1}
+.logo small{display:block;font-size:11.5px;color:var(--muted);margin-top:3px;letter-spacing:.01em}
+/* Linhas: nome em cima, detalhe embaixo, valor e ação à direita */
+.bill{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:12px;padding:11px 2px;cursor:default}
+.bill .nm{align-items:flex-start}
+.bill .nm>i{margin-top:7px}
+.bill .nm>span:not(.st){min-width:0;overflow-wrap:anywhere;line-height:1.35}
+.bill .nm small{display:block;margin-top:2px;line-height:1.35}
+.bill .v{text-align:right;white-space:nowrap}
+.acts{display:flex;gap:6px;justify-content:flex-end}
+.ib{appearance:none;width:36px;height:36px;border-radius:50%;border:1.5px solid var(--line);background:var(--surface-2);color:var(--ink-2);display:grid;place-items:center;cursor:pointer;flex:none;padding:0;touch-action:manipulation;transition:background-color .15s,border-color .15s,color .15s}
+.ib svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.ib:hover{border-color:var(--ink-2);color:var(--ink)}
+.ib.ok{border-color:color-mix(in srgb,var(--ink-2) 50%,transparent);background:transparent}
+.ib.ok:hover{color:var(--good-ink);border-color:var(--good-ink)}
+.ib.on{background:var(--good);border-color:var(--good);color:#fff}
+.ib.del:hover{color:var(--crit-ink);border-color:currentColor}
+td.acoes{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}
+.rep-tag{display:block;font-size:12px;color:var(--good-ink);font-weight:600;margin-top:2px}
+.mlbl{display:none}
+/* Aviso com Desfazer */
+.toast{display:flex;align-items:center;gap:16px}
+.toast[hidden]{display:none}
+.tbtn{appearance:none;border:0;background:none;color:inherit;font:inherit;font-weight:800;text-decoration:underline;text-underline-offset:3px;cursor:pointer;padding:4px 0;white-space:nowrap}
+/* Tela de senha */
+.lock{position:fixed;inset:0;z-index:100;background:var(--bg);display:grid;place-items:center;padding:24px 16px calc(24px + env(safe-area-inset-bottom,0px));overscroll-behavior:contain}
+.lock-in{display:grid;justify-items:center;gap:12px;width:min(320px,100%);text-align:center}
+.lock-in>svg{width:56px;height:56px;margin-bottom:6px}
+.lock-in h2{font-size:24px}
+.pins{display:flex;gap:16px;margin:8px 0 2px}
+.pins i{width:14px;height:14px;border-radius:50%;border:2px solid var(--ink-2)}
+.pins i.on{background:var(--accent);border-color:var(--accent)}
+.lock-err{min-height:1.5em;color:var(--crit-ink);font-size:14px;font-weight:600}
+.keys{display:grid;grid-template-columns:repeat(3,72px);gap:14px 24px;margin-top:4px}
+.keys button{width:72px;height:72px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:600 26px/1 var(--body);cursor:pointer;touch-action:manipulation}
+.keys button:active{background:var(--surface-2)}
+.keys .k0{grid-column:2}
+.keys .kdel{border:0;background:none;font-size:15px;color:var(--ink-2)}
+.lnk{appearance:none;border:0;background:none;color:var(--ink-2);font:inherit;font-size:14px;text-decoration:underline;text-underline-offset:3px;cursor:pointer;padding:10px}
+.lock.tremer .pins{animation:tremer .3s}
+@keyframes tremer{25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+.seg-btns{display:flex;flex-wrap:wrap;gap:6px}
+@media (max-width:860px){
+  .side-top{gap:12px}
+  .logo{padding:0}
+  .logo small{display:none}
+  .perfil-wrap{flex:none}
+  button.brand{display:flex;align-items:center;gap:6px;width:auto;padding:4px 6px 4px 4px;border-radius:999px;border:1px solid var(--line)}
+  button.brand #nomePerfil{font-size:14px;max-width:34vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  button.brand>span:not(.av){display:none}
+  .brand .av{width:30px;height:30px;font-size:11px}
+  .perfil-menu{left:auto;right:0;width:min(280px,calc(100vw - 32px))}
+  h1{font-size:30px}
+  header{align-items:flex-start}
+  .ytot{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;width:100%}
+  .ytot div{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 12px;min-width:0}
+  .ytot span{font-size:11.5px}
+  .ytot b{font-size:15px;white-space:nowrap}
+  .figs{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .fig{padding:14px 16px}
+  .fig.saldo{grid-column:1/-1;order:-1}
+  .figs:not(:has(.saldo))>.fig:first-child{grid-column:1/-1}
+  .fig b{font-size:21px}
+  .fig.saldo b,.figs:not(:has(.saldo))>.fig:first-child b{font-size:30px}
+  .fig small{font-size:12px}
+  .panel{padding:16px}
+  .bill{gap:10px}
+  table.gerir thead{display:none}
+  table.gerir,table.gerir tbody{display:block}
+  table.gerir tr{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 12px;padding:14px 0;border-bottom:1px solid var(--line)}
+  table.gerir td{display:flex;align-items:center;border:0;padding:0;white-space:normal;min-width:0}
+  table.gerir td:nth-child(1){grid-column:1;grid-row:1;font-weight:600;font-size:15px}
+  table.gerir td:nth-child(4){grid-column:2;grid-row:1;justify-content:flex-end;font-weight:600}
+  table.gerir td:nth-child(2){grid-column:1/-1;grid-row:2}
+  table.gerir td:nth-child(2) select{width:100%;min-width:0}
+  table.gerir td:nth-child(3){grid-column:1;grid-row:3}
+  table.gerir td:nth-child(5){grid-column:2;grid-row:3;justify-content:flex-end;text-align:right}
+  table.gerir td:nth-child(6){grid-column:1/-1;grid-row:4}
+  .bill:has(.acts){grid-template-columns:minmax(0,1fr) auto;row-gap:6px}
+  .bill:has(.acts) .nm{grid-column:1/-1}
+  .bill:has(.acts) .v{text-align:left;padding-left:16px}
+  table.gerir td[colspan]{grid-column:1/-1}
+  .mlbl{display:inline;font-size:12px;color:var(--muted);margin-right:8px;white-space:nowrap}
+  .tbl{overflow:visible}
+}
+@media (prefers-reduced-motion:reduce){.lock.tremer .pins{animation:none}}
 </style>
 
 <div class="app">
   <aside class="side">
     <div class="side-top">
+      <a class="logo" href="#geral" aria-label="Sobra, início"><svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#c4f26b"/><rect x="13" y="34" width="10" height="17" rx="3" fill="#0c0e0d"/><rect x="27" y="26" width="10" height="25" rx="3" fill="#0c0e0d"/><rect x="41" y="31" width="10" height="20" rx="3" fill="#0c0e0d" opacity=".28"/><circle cx="46" cy="19" r="6" fill="#0c0e0d"/></svg><span><b>sobra</b><small>finanças da casa</small></span></a>
       <div class="perfil-wrap">
         <button class="brand" id="perfilBtn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="perfilMenu" aria-label="Trocar de usuário">
-          <span class="av" aria-hidden="true" id="avPerfil">GS</span><b id="nomePerfil">Gabriel S.</b><span>Finanças 2026</span>
+          <span class="av" aria-hidden="true" id="avPerfil">GS</span><b id="nomePerfil">Gabriel S.</b><span>Trocar perfil</span>
           <svg class="chev" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M5 7.5l5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
         <div class="perfil-menu" id="perfilMenu" role="menu" aria-label="Usuários" hidden></div>
@@ -321,6 +424,9 @@ nav a .t{margin-left:auto;font-size:12px;color:var(--muted);font-weight:400}
         <div id="syncBox"><p class="nav-h">Planilha</p>
         <p class="sync-msg" id="syncMsg"><span class="dot"></span><span>Conectando ao Google Drive…</span></p>
         <button class="toggle" id="syncBtn" hidden>Sincronizar agora</button></div>
+        <p class="nav-h">Segurança e app</p>
+        <div class="seg-btns"><button class="toggle" id="pinBtn" type="button">Criar senha</button><button class="toggle" id="pinTirar" type="button" hidden>Tirar senha</button><button class="toggle" id="instalarBtn" type="button" hidden>Instalar no celular</button></div>
+        <p class="sync-msg" id="instalarDica" hidden><span>No iPhone, toque em Compartilhar e depois em Adicionar à Tela de Início.</span></p>
         <p class="nav-h">Tema</p>
         <div class="tema" role="group" aria-label="Tema"><button data-t="escuro" aria-pressed="true">Escuro</button><button data-t="claro" aria-pressed="false">Claro</button></div>
       </div>
@@ -364,7 +470,7 @@ nav a .t{margin-left:auto;font-size:12px;color:var(--muted);font-weight:400}
     </div>
 
     <div class="view" data-view="contas" hidden>
-      <header><div><h1>Organizar contas</h1><p class="sub">Busque uma conta, mude a categoria, arquive ou crie categorias. As mudanças ficam salvas para as próximas visitas.</p></div></header>
+      <header><div><h1>Organizar contas</h1><p class="sub">Mude a categoria e o dia do vencimento, arquive, ou repita uma conta da planilha nos meses seguintes.</p></div></header>
       <section class="panel">
         <div class="toolbar"><input class="campo" id="buscaContas" type="search" placeholder="Buscar por conta ou categoria" aria-label="Buscar por conta ou categoria" autocomplete="off"><span class="sub" id="nContas"></span></div>
         <div class="tbl"><table class="gerir"><thead><tr><th>Conta</th><th>Categoria</th><th>Vence dia</th><th class="num">Total no ano</th><th>Situação</th><th></th></tr></thead><tbody id="listaContas"></tbody></table></div>
@@ -382,13 +488,13 @@ nav a .t{margin-left:auto;font-size:12px;color:var(--muted);font-weight:400}
     </div>
 
     <div class="view" data-view="lancamentos" hidden>
-      <header style="align-items:center"><div><h1>Lançamentos</h1><p class="sub">O que você lança aqui soma à planilha. Receitas aumentam o que entrou. Despesas viram contas do mês e investimentos contam como saída.</p></div>
+      <header style="align-items:center"><div><h1>Lançamentos</h1><p class="sub">Tudo aqui soma à planilha. Receitas entram no mês, despesas viram contas e investimentos contam como saída.</p></div>
         <button class="btn" type="button" data-lancar>+ Novo lançamento</button></header>
       <div id="lancView" style="display:grid;gap:16px"></div>
     </div>
 
     <div class="view" data-view="pendentes" hidden>
-      <header><div><h1>A pagar</h1><p class="sub">Tudo que não está verde na planilha conta como pendente.</p></div></header>
+      <header><div><h1>A pagar</h1><p class="sub">Tudo que não está verde na planilha nem foi marcado como pago aqui.</p></div></header>
       <div id="pendView" style="display:grid;gap:16px"></div>
     </div>
 
@@ -400,7 +506,7 @@ nav a .t{margin-left:auto;font-size:12px;color:var(--muted);font-weight:400}
           <h3 style="color:var(--ink)">Como ler</h3>
           <p>Saiu soma as contas fixas e a oferta, igual ao Balanço da planilha.</p>
           <p>As categorias foram agrupadas pelo nome de cada conta.</p>
-          <p>Marcar uma conta como paga fica salvo só neste navegador.</p>
+          <p>Marcar uma conta como paga fica salvo na planilha de dados e aparece em todos os aparelhos.</p>
           <p>Fevereiro a junho estão vazios na planilha. Considerei as colunas depois de dezembro como janeiro a abril de 2027.</p>
         </div>
       </section>
@@ -417,6 +523,17 @@ nav a .t{margin-left:auto;font-size:12px;color:var(--muted);font-weight:400}
 </div>
 <div class="sheet-bg" id="sheetBg" hidden></div>
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<div class="lock" id="lock" role="dialog" aria-modal="true" aria-labelledby="lockT" hidden>
+  <div class="lock-in">
+    <svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#c4f26b"/><rect x="13" y="34" width="10" height="17" rx="3" fill="#0c0e0d"/><rect x="27" y="26" width="10" height="25" rx="3" fill="#0c0e0d"/><rect x="41" y="31" width="10" height="20" rx="3" fill="#0c0e0d" opacity=".28"/><circle cx="46" cy="19" r="6" fill="#0c0e0d"/></svg>
+    <h2 id="lockT">Digite sua senha</h2>
+    <p class="sub" id="lockSub"></p>
+    <div class="pins" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+    <p class="lock-err" id="lockErr" aria-live="assertive"></p>
+    <div class="keys" role="group" aria-label="Teclado numérico"><button type="button" data-k="1">1</button><button type="button" data-k="2">2</button><button type="button" data-k="3">3</button><button type="button" data-k="4">4</button><button type="button" data-k="5">5</button><button type="button" data-k="6">6</button><button type="button" data-k="7">7</button><button type="button" data-k="8">8</button><button type="button" data-k="9">9</button><button type="button" data-k="0" class="k0">0</button><button type="button" data-k="del" class="kdel" aria-label="Apagar">Apagar</button></div>
+    <button type="button" class="lnk" id="lockAlt">Agora não</button>
+  </div>
+</div>
 <dialog id="dlgLanc" aria-labelledby="dlgTit">
   <form id="formLanc" method="dialog" style="display:grid;gap:14px">
     <h3 id="dlgTit">Novo lançamento</h3>
@@ -457,7 +574,7 @@ nav a .t{margin-left:auto;font-size:12px;color:var(--muted);font-weight:400}
 // Versão GitHub Pages: os dados vêm do Apps Script do Gabriel (API privada com chave). O arquivo público não tem dados.
 (function(){
   const API=window.FINANCAS_API||"";
-  let t=null;try{const h=new URLSearchParams(location.hash.slice(1));if(h.get("chave")){t=h.get("chave");localStorage.setItem("gs26:chave",t);history.replaceState(null,"",location.pathname+"#geral")}else t=localStorage.getItem("gs26:chave")}catch(_){}
+  let t=null;try{const h=new URLSearchParams(location.hash.slice(1));if(h.get("chave")){t=h.get("chave");localStorage.setItem("gs26:chave",t);localStorage.removeItem("gs26:pin");history.replaceState(null,"",location.pathname+"#geral")}else t=localStorage.getItem("gs26:chave")}catch(_){}
   if(!API||!t){window.__semChave=true;return}
   const get=(p)=>fetch(API+"?"+new URLSearchParams({...p,t})).then(r=>r.json()).then(j=>{if(!j.ok)throw {code:j.erro||"tool_error"};return j.v});
   const post=(p)=>fetch(API,{method:"POST",body:JSON.stringify({...p,t})}).then(r=>r.json()).then(j=>{if(!j.ok)throw {code:j.erro||"tool_error"};return j.v});
@@ -470,6 +587,36 @@ nav a .t{margin-left:auto;font-size:12px;color:var(--muted);font-weight:400}
     set(d){return post({api:"salvar",k,json:JSON.stringify(d)})}}}
   window.__copia={ler:()=>get({api:"ler",k:"config/plano"}).then(v=>v?JSON.parse(v):null),salvar:(o)=>post({api:"salvar",k:"config/plano",json:JSON.stringify(o)})};
   window.claude={use:async(n)=>n==="db"?{doc}:n==="mcp"?{callTool:async()=>({payload:await get({api:"planilha"}),cache:{storedAt:Date.now()}})}:null};
+})();
+</script>
+<script>
+// Senha de 4 dígitos: fica só neste aparelho, guardada como resumo SHA-256 (nunca o número).
+(function(){
+  const L=document.getElementById("lock"),pins=[...L.querySelectorAll(".pins i")],tit=document.getElementById("lockT"),sub=document.getElementById("lockSub"),err=document.getElementById("lockErr"),alt=document.getElementById("lockAlt"),app=document.querySelector(".app"),tab=document.getElementById("tabbar");
+  const K="gs26:pin";let modo=null,dig="",prim="",sai=0;
+  const ler=(k)=>{try{return localStorage.getItem(k)}catch(_){return null}};
+  const grava=(k,v)=>{try{v==null?localStorage.removeItem(k):localStorage.setItem(k,v)}catch(_){}};
+  async function resumo(x){const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode("sobra:"+x));return [...new Uint8Array(b)].map(n=>n.toString(16).padStart(2,"0")).join("")}
+  const TXT={abrir:["Digite sua senha","Esqueceu? Abra de novo o seu link pessoal."],criar:["Crie uma senha","São 4 dígitos para abrir o app neste aparelho."],confirmar:["Repita a senha","Para confirmar."],tirar:["Digite a senha atual","Para tirar a senha deste aparelho."]};
+  function abrir(m){modo=m;dig="";err.textContent="";tit.textContent=TXT[m][0];sub.textContent=TXT[m][1];alt.hidden=m==="abrir";alt.textContent=m==="criar"&&!ler("gs26:pinVisto")?"Agora não":"Cancelar";pinta();L.hidden=false;app.inert=true;if(tab)tab.inert=true;document.documentElement.style.overflow="hidden"}
+  function fechar(){L.hidden=true;app.inert=false;if(tab)tab.inert=false;document.documentElement.style.overflow="";modo=null;if(window.atualizarSeguranca)window.atualizarSeguranca()}
+  function pinta(){pins.forEach((p,i)=>p.classList.toggle("on",i<dig.length))}
+  function erro(t){err.textContent=t;dig="";pinta();L.classList.remove("tremer");void L.offsetWidth;L.classList.add("tremer")}
+  const aviso=(t)=>{if(window.msgSalvo)window.msgSalvo(t,true)};
+  async function completo(){const h=await resumo(dig);
+    if(modo==="abrir"){if(h===ler(K))fechar();else erro("Senha errada. Tente de novo.");return}
+    if(modo==="tirar"){if(h===ler(K)){grava(K,null);fechar();aviso("Senha removida deste aparelho.")}else erro("Senha errada.");return}
+    if(modo==="criar"){prim=h;abrir("confirmar");return}
+    if(modo==="confirmar"){if(h===prim){grava(K,h);grava("gs26:pinVisto","1");fechar();aviso("Senha criada. O app vai pedir a senha ao abrir.")}else{abrir("criar");erro("As senhas não bateram. Crie de novo.")}}}
+  function tecla(d){if(!modo)return;if(d==="del"){dig=dig.slice(0,-1);pinta();return}if(dig.length>=4)return;dig+=d;err.textContent="";pinta();if(dig.length===4)setTimeout(completo,120)}
+  L.querySelector(".keys").addEventListener("click",(e)=>{const b=e.target.closest("button[data-k]");if(b)tecla(b.dataset.k)});
+  document.addEventListener("keydown",(e)=>{if(L.hidden)return;if(/^[0-9]$/.test(e.key)){e.preventDefault();tecla(e.key)}else if(e.key==="Backspace")tecla("del");else if(e.key==="Escape"&&modo!=="abrir")fechar()});
+  alt.onclick=()=>{if(modo==="criar"||modo==="confirmar")grava("gs26:pinVisto","1");fechar()};
+  // Volta a pedir a senha depois de 2 minutos fora do app.
+  document.addEventListener("visibilitychange",()=>{if(document.hidden)sai=Date.now();else if(ler(K)&&L.hidden&&sai&&Date.now()-sai>120000)abrir("abrir")});
+  window.senha={criar:()=>abrir("criar"),tirar:()=>abrir("tirar"),tem:()=>!!ler(K)};
+  if(ler(K))abrir("abrir");
+  else if(!window.__semChave&&!ler("gs26:pinVisto"))setTimeout(()=>{if(!ler(K)&&L.hidden)abrir("criar")},1800);
 })();
 </script>
 <script>
@@ -519,6 +666,7 @@ const brl0=new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL",maximu
 const pct=new Intl.NumberFormat("pt-BR",{style:"percent",maximumFractionDigits:0});
 const $=(s)=>document.querySelector(s);
 const cor=(c)=>`var(${CATS.find(x=>x.id===c).cor})`;
+const IC={check:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',edit:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>',trash:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>'};
 const esc=(s)=>String(s).replace(/[&<>"]/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[ch]));
 
 const despesas=(i)=>CONTAS.reduce((s,c)=>s+c.v[i],0);
@@ -551,10 +699,10 @@ function renderAlertas(){
   const atr=vs.filter(x=>x.d<0), prox=vs.filter(x=>x.d>=0), tot=(xs)=>xs.reduce((a,x)=>a+x.c.v[x.i],0);
   el.innerHTML=`<div class="panel-head"><h3 id="alT">Vencimentos</h3><span class="sub">${atr.length?`<span class="atr">${atr.length} ${atr.length>1?"atrasadas":"atrasada"} (${brl.format(tot(atr))})</span> · `:""}${prox.length} nos próximos 7 dias (${brl.format(tot(prox))})</span></div>
     <ul class="bills">${vs.map(x=>`<li><div class="bill"><span class="nm"><i style="background:${cor(x.c.c)}"></i><span>${esc(x.c.n)} <small class="${x.d<0?"atr":""}">${quandoTxt(x.d)} · ${dataVenc(x.i,x.c.dia).slice(0,5)}</small></span></span>
-      <span class="v">${brl.format(x.c.v[x.i])}</span><button class="btn sec" style="padding:4px 10px;font-size:12px" data-pgal="${chave(x.c.n)}:${x.i}" aria-label="Marcar ${esc(x.c.n)} como pago">Marcar pago</button></div></li>`).join("")}</ul>`;
+      <span class="v">${brl.format(x.c.v[x.i])}</span><button class="ib ok" type="button" data-pgal="${chave(x.c.n)}:${x.i}" aria-label="Marcar ${esc(x.c.n)} como paga" title="Marcar como paga">${IC.check}</button></div></li>`).join("")}</ul>`;
 }
 document.addEventListener("click",(e)=>{const b=e.target.closest("[data-pgal]");if(!b)return;const [k,i]=b.dataset.pgal.split(":");const c=CONTAS.find(x=>chave(x.n)===k);if(!c)return;
-  mudar(()=>{const key=k+":"+i;if(stPlan(c,Number(i))==="pago")delete ORG.status[key];else ORG.status[key]="pago"});msgSalvo(`${c.n} marcada como paga.`)});
+  mudar(()=>{const key=k+":"+i;if(stPlan(c,Number(i))==="pago")delete ORG.status[key];else ORG.status[key]="pago"});msgSalvo(`${c.n} de ${MESES[Number(i)%12].toLowerCase()} marcada como paga.`)});
 function renderTotais(){
   const r=ANO.reduce((a,i)=>a+RECEITA[i],0);
   const s=ANO.reduce((a,i)=>a+saidas(i),0);
@@ -660,7 +808,7 @@ function renderMes(){
           return `<li class="grp-li"><div class="grp"><span class="st ${k||"nenhum"}">${t}</span><span>${brl.format(its.reduce((a,c)=>a+c.v[i],0))}</span></div></li>`+its.map(c=>`<li><div class="bill ${k||""}">
             <span class="nm"><i style="background:${c.oferta?"var(--muted)":cor(c.c)}"></i><span>${esc(c.n)} <small>${c.oferta?"Oferta":CATS.find(x=>x.id===c.c).nome}${c.info&&c.info[i]?" · "+esc(c.info[i]):""}${c.dia?" · vence "+dataVenc(i,c.dia).slice(0,5):""}</small>${atrasada(c,i)?` <small class="atr">atrasada</small>`:""}</span></span>
             <span class="v">${brl.format(c.v[i])}</span>
-            <button class="btn sec" style="padding:4px 10px;font-size:12px" data-pg="${chave(c.n)}" aria-label="${k==="pago"?"Desmarcar":"Marcar como pago"} ${esc(c.n)}">${k==="pago"?"Desmarcar":"Marcar pago"}</button></div></li>`).join("")}).join("")}
+            <button class="ib ${k==="pago"?"on":"ok"}" type="button" data-pg="${chave(c.n)}" aria-pressed="${k==="pago"}" aria-label="${k==="pago"?"Desmarcar":"Marcar como paga"} ${esc(c.n)}" title="${k==="pago"?"Paga · toque para desmarcar":"Marcar como paga"}">${IC.check}</button></div></li>`).join("")}).join("")}
         </ul>
       </div>
     </div>`;
@@ -668,6 +816,7 @@ function renderMes(){
     const c=lista.find(x=>chave(x.n)===b.dataset.pg);if(!c)return;
     const key=b.dataset.pg+":"+i, novo=stOf(c,i)==="pago"?"pendente":"pago";
     mudar(()=>{if(novo===stPlan(c,i))delete ORG.status[key];else ORG.status[key]=novo});
+    msgSalvo(novo==="pago"?`${c.n} marcada como paga.`:`${c.n} voltou para pendente.`);
   };
 }
 
@@ -794,7 +943,7 @@ function montarCats(){
 }
 // Contas incluídas no dashboard (fora da planilha) entram junto com as da planilha.
 function arquivar(contas){
-  const ex=(ORG.extras||[]).map(e=>({n:e.n,c:e.c,v:e.fixa?m(span(Number(e.desde)||0,NM-1,Number(e.valor)||0)):m(e.v),extra:true,id:e.id,fixa:!!e.fixa,info:e.info||{},dia:Number(e.dia)||0}));
+  const ex=(ORG.extras||[]).map(e=>({n:e.n,c:e.c,v:e.fixa?m(span(Number(e.desde)||0,NM-1,Number(e.valor)||0)):m(e.v),extra:true,rep:!!e.rep,id:e.id,fixa:!!e.fixa,info:e.info||{},dia:(e.rep&&Number(ORG.dias?.[chave(e.n)]))||Number(e.dia)||0}));
   return [...contas.filter(c=>!c.extra),...ex].map(c=>{const k=chave(c.n),c0=c.c0||c.c,esc0=ORG.atrib[k];
     const ok=esc0&&CATS.some(x=>x.id===esc0);
     return {...c,c0,c:ok?esc0:(ARQUIVADAS(k)&&!c.extra&&!c.fixo?"arq":c0),dia:c.extra||c.fixo?c.dia:(Number(ORG.dias?.[k])||0)}});
@@ -828,7 +977,7 @@ async function sincronizar(){
     if(!b64||typeof XLSX==="undefined")throw {code:"formato"};
     const d=lerXlsx(b64);
     if(!d)throw {code:"formato"};
-    aplicar(d);
+    aplicar(d);try{localStorage.setItem("gs26:plan",JSON.stringify(d))}catch(_){}
     try{if(window.__copia)window.__copia.salvar(d).catch(()=>{})}catch(_){}
     if(PERFIL!=="gabriel")return;
     const quando=hora(res.cache?.storedAt??Date.now());
@@ -836,7 +985,8 @@ async function sincronizar(){
     $("#fonte").textContent=`Dados ao vivo da planilha ${String(p.title||"FINANCEIRO 2026 - GS").replace(/\.xlsx$/i,"")}, lidos em ${quando}`;
   }catch(e){
     const c=e&&e.code;
-    try{const d=window.__copia?await window.__copia.ler():null;if(d&&Array.isArray(d.contas)){aplicar(d);
+    if(!navigator.onLine){syncMsg("err","Sem internet. Mostrando os últimos dados salvos neste aparelho.",true);return}
+    try{const d=window.__copia?await window.__copia.ler():null;if(d&&Array.isArray(d.contas)){aplicar(d);try{localStorage.setItem("gs26:plan",JSON.stringify(d))}catch(_){}
       syncMsg("err","Mostrando a última cópia da planilha. O Apps Script ainda não tem permissão para abrir o Google Drive.",true);
       $("#fonte").textContent="Cópia salva da planilha FINANCEIRO 2026 - GS";return}}catch(_){}
     const msg={
@@ -880,7 +1030,7 @@ function renderPend(){
     </div>
     ${ms.map(m=>{const quando=m.i<MES_ATUAL?["atrasado","Mês já passou"]:m.i===MES_ATUAL?["pendente","Este mês"]:["nenhum","Próximo"];
       return `<section class="panel"><div class="panel-head"><h3>${nomeMes(m.i)}</h3><span style="display:flex;gap:10px;align-items:center"><span class="st ${quando[0]}">${quando[1]}</span><b>${brl.format(m.total)}</b></span></div>
-      <ul class="bills">${m.its.sort((a,b)=>(a.dia||99)-(b.dia||99)||b.v[m.i]-a.v[m.i]).map(c=>`<li><div class="bill"><span class="nm"><i style="background:${c.oferta?"var(--muted)":cor(c.c)}"></i><span>${esc(c.n)} <small>${c.oferta?"Oferta":CATS.find(x=>x.id===c.c).nome}${c.dia?" · vence "+dataVenc(m.i,c.dia).slice(0,5):""}</small></span></span><span class="v">${brl.format(c.v[m.i])}</span></div></li>`).join("")}</ul></section>`}).join("")}`;
+      <ul class="bills">${m.its.sort((a,b)=>(a.dia||99)-(b.dia||99)||b.v[m.i]-a.v[m.i]).map(c=>`<li><div class="bill"><span class="nm"><i style="background:${c.oferta?"var(--muted)":cor(c.c)}"></i><span>${esc(c.n)} <small>${c.oferta?"Oferta":CATS.find(x=>x.id===c.c).nome}${c.dia?" · vence "+dataVenc(m.i,c.dia).slice(0,5):""}</small></span></span><span class="v">${brl.format(c.v[m.i])}</span>${c.oferta?"<span></span>":`<button class="ib ok" type="button" data-pgal="${chave(c.n)}:${m.i}" aria-label="Marcar ${esc(c.n)} de ${MESES[m.i%12].toLowerCase()} como paga" title="Marcar como paga">${IC.check}</button>`}</div></li>`).join("")}</ul></section>`}).join("")}`;
 }
 
 function renderNav(){
@@ -957,17 +1107,19 @@ let filtro="", orgDoc=null, fila=Promise.resolve(), excluindo=null;
 const totAno=(c)=>c.v.slice(0,12).reduce((a,b)=>a+b,0);
 function renderContas(){
   const q=chave(filtro);
-  const lista=CONTAS.filter(c=>!q||chave(c.n).includes(q)||chave(CATS.find(x=>x.id===c.c)?.nome||"").includes(q))
+  const todas=CONTAS.filter(c=>!c.rep);
+  const lista=todas.filter(c=>!q||chave(c.n).includes(q)||chave(CATS.find(x=>x.id===c.c)?.nome||"").includes(q))
     .sort((a,b)=>(a.c==="arq")-(b.c==="arq")||a.n.localeCompare(b.n,"pt-BR"));
-  $("#nContas").textContent=q?`${lista.length} de ${CONTAS.length} contas`:`${CONTAS.length} contas`;
+  $("#nContas").textContent=q?`${lista.length} de ${todas.length} contas`:`${todas.length} contas`;
   $("#listaContas").innerHTML=lista.length?lista.map(c=>{
     const k=chave(c.n), pend=c.v.filter((x,i)=>x&&stOf(c,i)==="pendente").length, arq=c.c==="arq";
+    let ult=-1;c.v.forEach((x,i)=>{if(x>0)ult=i});const rp=!c.extra&&(ORG.extras||[]).find(x=>x.rep&&chave(x.n)===k);
     return `<tr class="${arq?"arq":""}"><td><span class="nm" style="display:flex;align-items:center;gap:8px"><i style="width:9px;height:9px;border-radius:50%;flex:none;background:var(${CATS.find(x=>x.id===c.c).cor})"></i>${esc(c.n)}</span></td>
       <td><select class="campo" data-k="${k}" aria-label="Categoria de ${esc(c.n)}">${CATS.map(x=>`<option value="${x.id}"${x.id===c.c?" selected":""}>${esc(x.nome)}</option>`).join("")}</select></td>
-      <td><input class="campo dia-in" type="number" min="1" max="31" inputmode="numeric" data-dia="${k}" value="${c.dia||""}" placeholder="–" aria-label="Dia do vencimento de ${esc(c.n)}"></td>
+      <td><span class="mlbl">Vence dia</span><input class="campo dia-in" type="number" min="1" max="31" inputmode="numeric" data-dia="${k}" value="${c.dia||""}" placeholder="–" aria-label="Dia do vencimento de ${esc(c.n)}"></td>
       <td class="num">${brl.format(totAno(c))}</td>
-      <td>${pend?`<span class="st pendente">${pend} ${pend>1?"pendentes":"pendente"}</span>`:`<span class="st pago">Em dia</span>`}</td>
-      <td><button class="btn sec" data-arq="${k}">${arq?"Restaurar":"Arquivar"}</button></td></tr>`}).join("")
+      <td><span>${pend?`<span class="st pendente">${pend} ${pend>1?"pendentes":"pendente"}</span>`:`<span class="st pago">Em dia</span>`}${rp?`<span class="rep-tag">Repete ${brl.format(rp.valor)} por mês desde ${nomeMesC(Number(rp.desde)).toLowerCase()}</span>`:""}</span></td>
+      <td class="acoes">${!c.extra&&!arq&&ult>=0?(rp?`<button class="btn sec" data-rep="${k}">Parar de repetir</button>`:ult<NM-1?`<button class="btn sec" data-rep="${k}" title="Repetir ${brl.format(c.v[ult])} todo mês a partir de ${nomeMesC(ult+1).toLowerCase()}">Repetir</button>`:""):""}<button class="btn sec" data-arq="${k}">${arq?"Restaurar":"Arquivar"}</button></td></tr>`}).join("")
     :`<tr><td colspan="6" class="sub">Nenhuma conta encontrada para "${esc(filtro)}".</td></tr>`;
   $("#listaCats").innerHTML=CATS.map(c=>{const n=CONTAS.filter(x=>x.c===c.id).length;
     return `<li><div class="bill"><span class="nm"><i style="background:var(${c.cor})"></i><span>${esc(c.nome)} <small>${n} ${n===1?"conta":"contas"}${c.custom?"":" · padrão"}</small></span></span>
@@ -1053,10 +1205,10 @@ function renderLanc(){
     </div>
     ${ex.length?`<section class="panel"><div class="panel-head"><h3>Despesas</h3><button class="btn sec" type="button" data-lancar="despesa">+ Lançar despesa</button></div>
       <ul class="bills">${ex.map(e=>{const cat=CATS.find(x=>x.id===(ORG.atrib[chave(e.n)]||e.c))||CATS.find(x=>x.id==="outros");return `<li><div class="bill"><span class="nm"><i style="background:var(${cat.cor})"></i><span>${esc(e.n)} <small>${esc(cat.nome)} · ${faixa(e)}</small></span></span>
-        <span class="v">${e.fixa?`${brl.format(e.valor)}/mês`:`− ${brl.format(somaEx(e))}`}</span><button class="btn sec" style="padding:4px 10px;font-size:12px" data-edext="${esc(e.id)}" aria-label="Editar ${esc(e.n)}">Editar</button><button class="btn sec" style="padding:4px 10px;font-size:12px" data-rmext="${esc(e.id)}" aria-label="Remover ${esc(e.n)}">Remover</button></div></li>`}).join("")}</ul></section>`:""}
+        <span class="v">${e.fixa?`${brl.format(e.valor)}/mês`:`− ${brl.format(somaEx(e))}`}</span><span class="acts"><button class="ib" type="button" data-edext="${esc(e.id)}" aria-label="Editar ${esc(e.n)}" title="Editar">${IC.edit}</button><button class="ib del" type="button" data-rmext="${esc(e.id)}" aria-label="Remover ${esc(e.n)}" title="Remover">${IC.trash}</button></span></div></li>`}).join("")}</ul></section>`:""}
     ${meses.length?meses.map(m=>`<section class="panel"><div class="panel-head"><h3>${MESES[m]}</h3><button class="btn sec" type="button" data-lancar="receita" data-mes="${m}">+ Lançar em ${MESES[m].toLowerCase()}</button></div>
       <ul class="bills">${ls.filter(l=>l.mes===m).map(l=>`<li><div class="bill"><span class="nm"><span class="st ${l.tipo==="receita"?"pago":"nenhum"}">${l.tipo==="receita"?"Receita":"Investimento"}</span><span>${esc(l.desc)}</span></span>
-        <span class="v">${l.tipo==="receita"?"+":"−"} ${brl.format(l.v)}</span><button class="btn sec" style="padding:4px 10px;font-size:12px" data-edlanc="${l.id}" aria-label="Editar ${esc(l.desc)}">Editar</button><button class="btn sec" style="padding:4px 10px;font-size:12px" data-rmlanc="${l.id}" aria-label="Remover ${esc(l.desc)}">Remover</button></div></li>`).join("")}</ul></section>`).join("")
+        <span class="v">${l.tipo==="receita"?"+":"−"} ${brl.format(l.v)}</span><span class="acts"><button class="ib" type="button" data-edlanc="${l.id}" aria-label="Editar ${esc(l.desc)}" title="Editar">${IC.edit}</button><button class="ib del" type="button" data-rmlanc="${l.id}" aria-label="Remover ${esc(l.desc)}" title="Remover">${IC.trash}</button></span></div></li>`).join("")}</ul></section>`).join("")
     :ex.length?"":`<div class="empty-state">Nada lançado ainda. Clique em + Novo lançamento para adicionar o primeiro.</div>`}`;
 }
 $("#lancView").addEventListener("click",(e)=>{
@@ -1070,14 +1222,28 @@ function renderMesesArq(){
 $("#listaMeses").addEventListener("click",(e)=>{const b=e.target.closest("[data-mes]");if(!b)return;const i=Number(b.dataset.mes);
   mudar(()=>{ORG.mesesArq=ativo(i)?[...ORG.mesesArq,i]:ORG.mesesArq.filter(x=>x!==i)});msgSalvo(`${MESES[i]} ${ativo(i)?"restaurado":"arquivado"}.`)});
 let toastT=null;
-function msgSalvo(t){$("#salvoMsg").textContent=t;const el=$("#toast");el.textContent=t;el.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>{el.hidden=true},4000)}
+let desfazer=null,ultToast=0;
+// Aviso embaixo da tela. Logo depois de uma mudança, ele traz o botão Desfazer.
+function msgSalvo(t,semDesfazer){$("#salvoMsg").textContent=t;const el=$("#toast");ultToast=Date.now();
+  const u=!semDesfazer&&desfazer&&Date.now()-desfazer.t<1500;
+  el.innerHTML=`<span>${esc(t)}</span>${u?`<button type="button" class="tbtn" id="undoBtn">Desfazer</button>`:""}`;el.hidden=false;
+  clearTimeout(toastT);toastT=setTimeout(()=>{el.hidden=true},u?7000:4000)}
+$("#toast").addEventListener("click",(e)=>{if(!e.target.closest("#undoBtn")||!desfazer)return;const d=desfazer;desfazer=null;
+  if(d.perfil!==PERFIL){msgSalvo("Volte para o mesmo usuário para desfazer.",true);return}
+  ORG=normOrg(JSON.parse(d.antes));base();montarCats();montarReceita();montarAno();CONTAS=arquivar(CONTAS);renderTudo();salvarOrg();msgSalvo("Mudança desfeita.",true)});
+// Salva primeiro no aparelho; sem internet, marca como pendente e envia quando a conexão voltar.
 function salvarOrg(){
-  const dados=JSON.parse(JSON.stringify(ORG));
+  const dados=JSON.parse(JSON.stringify(ORG)),id=PERFIL;
+  try{localStorage.setItem(chaveLocal(),JSON.stringify(dados))}catch(_){}
   fila=fila.then(async()=>{
-    if(orgDoc){await orgDoc.set(dados);$("#salvoMsg").textContent="Mudanças salvas."}
-    else{localStorage.setItem(chaveLocal(),JSON.stringify(dados));msgSalvo("Mudanças salvas neste navegador.")}
-  }).catch(()=>msgSalvo("Não consegui salvar a última mudança. Tente de novo."));
+    if(!dbApi){$("#salvoMsg").textContent="Mudanças salvas neste aparelho.";return}
+    await dbApi.doc(docDe(id)).set(dados);try{localStorage.removeItem("gs26:pend:"+id)}catch(_){}$("#salvoMsg").textContent="Mudanças salvas."
+  }).catch(()=>{try{localStorage.setItem("gs26:pend:"+id,"1")}catch(_){}msgSalvo("Sem conexão: a mudança ficou salva neste aparelho e vai para a planilha quando a internet voltar.",true)});
 }
+async function enviarPendentes(){if(!dbApi)return;
+  for(const p of PERFIS){let f=null,o=null;try{f=localStorage.getItem("gs26:pend:"+p.id);o=JSON.parse(localStorage.getItem(p.id==="gabriel"?"gs26:org":"gs26:org:"+p.id)||"null")}catch(_){}
+    if(!f||!o)continue;try{await dbApi.doc(docDe(p.id)).set(o);localStorage.removeItem("gs26:pend:"+p.id)}catch(_){return}}}
+window.addEventListener("online",()=>{enviarPendentes();if(typeof sincronizar==="function")sincronizar()});
 function normOrg(o){
   const ORG={cats:Array.isArray(o?.cats)?o.cats.filter(c=>c&&c.id&&c.nome):[],atrib:o?.atrib&&typeof o.atrib==="object"?{...o.atrib}:{},
     status:o?.status&&typeof o.status==="object"?{...o.status}:{},mesesArq:Array.isArray(o?.mesesArq)?o.mesesArq.filter(Number.isInteger):[],
@@ -1091,18 +1257,26 @@ function normOrg(o){
 }
 function usarOrg(o){
   if(PERFIL==="__todos")return;
-  ORG=normOrg(o);
+  ORG=normOrg(o);try{localStorage.setItem(chaveLocal(),JSON.stringify(ORG))}catch(_){}
   base();montarCats();montarReceita();montarAno();CONTAS=arquivar(CONTAS);
   if(!temDados(sel)){const d=ANO.find(i=>i>=MES_ATUAL&&temDados(i))??ANO.filter(temDados).pop();if(d!=null)sel=d}
   renderTudo();
 }
-function mudar(fn){if(PERFIL==="__todos"){msgSalvo("A visão da casa é só para consultar. Escolha um usuário no topo para mudar algo.");return}fn();montarCats();montarReceita();montarAno();CONTAS=arquivar(CONTAS);renderTudo();salvarOrg()}
+function mudar(fn){if(PERFIL==="__todos"){msgSalvo("A visão da casa é só para consultar. Escolha um usuário no topo para mudar algo.",true);return}
+  const antes=JSON.stringify(ORG);fn();montarCats();montarReceita();montarAno();CONTAS=arquivar(CONTAS);renderTudo();salvarOrg();
+  desfazer={antes,perfil:PERFIL,t:Date.now()};const t0=desfazer.t;setTimeout(()=>{if(ultToast<t0)msgSalvo("Mudança salva.")},0)}
 $("#listaContas").addEventListener("change",(e)=>{const sl=e.target.closest("select[data-k]");if(sl)mudar(()=>{ORG.atrib[sl.dataset.k]=sl.value});
   const di=e.target.closest("input[data-dia]");if(!di)return;const k=di.dataset.dia,d=Math.round(Number(di.value));
   if(di.value&&!(d>=1&&d<=31)){msgSalvo("O dia do vencimento vai de 1 a 31.");di.value="";return}
   const c=CONTAS.find(x=>chave(x.n)===k);
   mudar(()=>{if(c&&c.extra){ORG.extras=ORG.extras.map(x=>chave(x.n)===k?{...x,dia:d||undefined}:x)}else if(d)ORG.dias[k]=d;else delete ORG.dias[k]});
   if(c)msgSalvo(d?`${c.n} vence todo dia ${d}.`:`Tirei o vencimento de ${c.n}.`)});
+$("#listaContas").addEventListener("click",(e)=>{const r=e.target.closest("[data-rep]");if(!r)return;const k=r.dataset.rep;
+  const ex=(ORG.extras||[]).find(x=>x.rep&&chave(x.n)===k);
+  if(ex){mudar(()=>{ORG.extras=ORG.extras.filter(x=>x.id!==ex.id)});msgSalvo(`${ex.n} parou de repetir.`);return}
+  const c=CONTAS.find(x=>!x.extra&&chave(x.n)===k);if(!c)return;let u=-1;c.v.forEach((x,i)=>{if(x>0)u=i});if(u<0||u>=NM-1)return;
+  mudar(()=>{ORG.extras=[...ORG.extras,{id:"xrep"+k,n:c.n,c:c.c0||c.c,fixa:true,desde:u+1,valor:c.v[u],rep:true}]});
+  msgSalvo(`${c.n} vai repetir ${brl.format(c.v[u])} todo mês a partir de ${nomeMesC(u+1).toLowerCase()}.`)});
 $("#listaContas").addEventListener("click",(e)=>{const b=e.target.closest("[data-arq]");if(!b)return;const c=CONTAS.find(x=>chave(x.n)===b.dataset.arq);if(c)mudar(()=>{ORG.atrib[b.dataset.arq]=c.c==="arq"?c.c0:"arq"})});
 $("#listaCats").addEventListener("click",(e)=>{const b=e.target.closest("[data-del]");if(!b)return;const id=b.dataset.del;
   if(excluindo!==id){excluindo=id;renderContas();return}
@@ -1160,7 +1334,7 @@ function trocarPerfil(id){
   let o=null;try{o=JSON.parse(localStorage.getItem(chaveLocal())||"null")}catch(_){}
   usarOrg(o||{});
   if(dbApi){orgDoc=dbApi.doc(docDe(PERFIL));
-    const meu=orgDoc;orgUnsub=orgDoc.onSnapshot(sn=>{if(orgDoc===meu&&sn.exists)usarOrg(sn.data())},()=>{orgDoc=null;msgSalvo("As mudanças vão ficar salvas só neste navegador.")})}
+    const meu=orgDoc;orgUnsub=orgDoc.onSnapshot(sn=>{let pend=null;try{pend=localStorage.getItem("gs26:pend:"+PERFIL)}catch(_){}if(orgDoc===meu&&sn.exists&&!pend)usarOrg(sn.data())},()=>{})}
 }
 // Menu de usuários no nome do topo: abre na seta, fecha com Esc ou clique fora, setas navegam.
 const pBtn=$("#perfilBtn"), pMenu=$("#perfilMenu");
@@ -1195,6 +1369,7 @@ function usarPerfis(l){if(!Array.isArray(l))return;const ok=l.filter(p=>p&&p.id&
   PERFIS=[PERFIS.find(p=>p.id==="gabriel")||{id:"gabriel",nome:"Gabriel S."},...ok];
   if(PERFIL===CASA.id){assinarTodos();if(PERFIS.length>1){renderPerfis();montarCasa()}else trocarPerfil("gabriel")}
   else if(!PERFIS.some(p=>p.id===PERFIL))trocarPerfil("gabriel");else renderPerfis()}
+try{const pl=JSON.parse(localStorage.getItem("gs26:plan")||"null");if(pl&&Array.isArray(pl.contas))PLAN=pl}catch(_){}
 try{usarPerfis(JSON.parse(localStorage.getItem("gs26:perfis")||"null"))}catch(_){}
 let perfilIni="gabriel";try{perfilIni=localStorage.getItem("gs26:perfil")||"gabriel"}catch(_){}
 trocarPerfil(perfilIni);
@@ -1203,6 +1378,7 @@ renderContas();
   try{
     dbApi=window.claude?.use?await window.claude.use("db"):null;
     if(!dbApi)return;
+    await enviarPendentes();
     dbApi.doc("config/perfis").onSnapshot(sn=>{if(sn.exists){const l=sn.data().lista;usarPerfis(l);try{localStorage.setItem("gs26:perfis",JSON.stringify(PERFIS))}catch(_){}
       if(perfilIni!=="gabriel"&&PERFIL==="gabriel"&&(PERFIS.some(p=>p.id===perfilIni)||perfilIni===CASA.id&&PERFIS.length>1)){trocarPerfil(perfilIni)}}},()=>{});
     trocarPerfil(PERFIL);
@@ -1214,4 +1390,15 @@ syncMsg("","Lendo a planilha no Google Drive…",false);
   if(!mcpApi){syncMsg("","Abra o link com a chave que o Claude enviou para ver seus dados.",false);return}
   sincronizar();
 })();
+
+// App instalável: guarda a página para abrir sem internet e oferece instalar na tela inicial.
+if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
+let pedidoInstalar=null;
+window.addEventListener("beforeinstallprompt",(e)=>{e.preventDefault();pedidoInstalar=e;$("#instalarBtn").hidden=false});
+$("#instalarBtn").onclick=async()=>{if(!pedidoInstalar)return;pedidoInstalar.prompt();try{await pedidoInstalar.userChoice}catch(_){}pedidoInstalar=null;$("#instalarBtn").hidden=true};
+if(!(matchMedia("(display-mode: standalone)").matches||navigator.standalone)&&/iphone|ipad|ipod/i.test(navigator.userAgent))$("#instalarDica").hidden=false;
+window.atualizarSeguranca=()=>{const t=!!(window.senha&&senha.tem());$("#pinBtn").textContent=t?"Trocar senha":"Criar senha";$("#pinTirar").hidden=!t};
+atualizarSeguranca();
+$("#pinBtn").onclick=()=>window.senha&&senha.criar();
+$("#pinTirar").onclick=()=>window.senha&&senha.tirar();
 </script>

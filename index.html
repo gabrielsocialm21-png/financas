@@ -523,6 +523,16 @@ td.acoes{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}
 </div>
 <div class="sheet-bg" id="sheetBg" hidden></div>
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<div class="lock" id="conectar" role="dialog" aria-modal="true" aria-labelledby="conT" hidden>
+  <form class="lock-in" id="conForm">
+    <svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#c4f26b"/><rect x="13" y="34" width="10" height="17" rx="3" fill="#0c0e0d"/><rect x="27" y="26" width="10" height="25" rx="3" fill="#0c0e0d"/><rect x="41" y="31" width="10" height="20" rx="3" fill="#0c0e0d" opacity=".28"/><circle cx="46" cy="19" r="6" fill="#0c0e0d"/></svg>
+    <h2 id="conT">Conecte este aparelho</h2>
+    <p class="sub">Cole aqui o seu link pessoal do Sobra. Só precisa fazer isso uma vez em cada aparelho.</p>
+    <input class="campo" id="conLink" type="text" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://…#chave=…" aria-label="Link pessoal" style="text-align:center">
+    <p class="lock-err" id="conErr" aria-live="assertive"></p>
+    <button class="btn" type="submit" id="conBtn" style="width:100%;padding:12px 16px;font-size:16px">Conectar</button>
+  </form>
+</div>
 <div class="lock" id="lock" role="dialog" aria-modal="true" aria-labelledby="lockT" hidden>
   <div class="lock-in">
     <svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#c4f26b"/><rect x="13" y="34" width="10" height="17" rx="3" fill="#0c0e0d"/><rect x="27" y="26" width="10" height="25" rx="3" fill="#0c0e0d"/><rect x="41" y="31" width="10" height="20" rx="3" fill="#0c0e0d" opacity=".28"/><circle cx="46" cy="19" r="6" fill="#0c0e0d"/></svg>
@@ -575,7 +585,17 @@ td.acoes{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}
 (function(){
   const API=window.FINANCAS_API||"";
   let t=null;try{const h=new URLSearchParams(location.hash.slice(1));if(h.get("chave")){t=h.get("chave");localStorage.setItem("gs26:chave",t);localStorage.removeItem("gs26:pin");history.replaceState(null,"",location.pathname+"#geral")}else t=localStorage.getItem("gs26:chave")}catch(_){}
-  if(!API||!t){window.__semChave=true;return}
+  if(!API||!t){window.__semChave=true;
+    // Sem chave neste aparelho (ex.: app instalado no iPhone): pede o link pessoal.
+    if(API){const box=document.getElementById("conectar"),f=document.getElementById("conForm"),inp=document.getElementById("conLink"),er=document.getElementById("conErr"),bt=document.getElementById("conBtn");
+      box.hidden=false;document.querySelector(".app").inert=true;
+      f.addEventListener("submit",async(e)=>{e.preventDefault();const txt=inp.value.trim();const m=txt.match(/chave=([^&\s#]+)/);const k=decodeURIComponent(m?m[1]:txt);
+        if(!/^[A-Za-z0-9_-]{8,}$/.test(k)){er.textContent="Não encontrei a chave nesse link. Copie o link inteiro.";return}
+        bt.disabled=true;bt.textContent="Conectando…";er.textContent="";
+        try{const r=await fetch(API+"?"+new URLSearchParams({api:"ler",k:"config/perfis",t:k})).then(x=>x.json());
+          if(!r.ok)throw 0;localStorage.setItem("gs26:chave",k);localStorage.removeItem("gs26:pin");location.replace(location.pathname+"#geral");location.reload()}
+        catch(_){bt.disabled=false;bt.textContent="Conectar";er.textContent=navigator.onLine?"Esse link não funcionou. Confira se copiou o link pessoal inteiro.":"Sem internet. Conecte e tente de novo."}})}
+    return}
   const get=(p)=>fetch(API+"?"+new URLSearchParams({...p,t})).then(r=>r.json()).then(j=>{if(!j.ok)throw {code:j.erro||"tool_error"};return j.v});
   const post=(p)=>fetch(API,{method:"POST",body:JSON.stringify({...p,t})}).then(r=>r.json()).then(j=>{if(!j.ok)throw {code:j.erro||"tool_error"};return j.v});
   function doc(k){return{

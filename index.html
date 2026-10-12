@@ -393,6 +393,24 @@ td.acoes{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}
   .tbl{overflow:visible}
 }
 @media (prefers-reduced-motion:reduce){.lock.tremer .pins{animation:none}}
+
+/* ===== margens no celular (v28) ===== */
+@media (max-width:860px){
+  :root{--gx:max(20px,calc(env(safe-area-inset-left,0px) + 12px));--gxr:max(20px,calc(env(safe-area-inset-right,0px) + 12px))}
+  .wrap{padding-left:var(--gx)!important;padding-right:var(--gxr)!important;gap:22px}
+  .side{padding-left:var(--gx);padding-right:var(--gxr)}
+  .tabbar{padding-left:max(8px,env(safe-area-inset-left,0px));padding-right:max(8px,env(safe-area-inset-right,0px))}
+  .panel{padding:18px 16px}
+  .ruler{padding:16px 12px 10px}
+  table.gerir td:nth-child(5),table.gerir td:nth-child(5)>span{display:contents}
+  table.gerir td:nth-child(5) .st{grid-column:2;grid-row:3;justify-self:end;align-self:center}
+  table.gerir .rep-tag{grid-column:1/-1;grid-row:4;margin:0;text-align:left;line-height:1.35}
+  table.gerir tr:has(.rep-tag) td:nth-child(6){grid-row:5}
+}
+@media (max-width:380px){
+  :root{--gx:max(16px,calc(env(safe-area-inset-left,0px) + 10px));--gxr:max(16px,calc(env(safe-area-inset-right,0px) + 10px))}
+  .panel{padding:16px 14px}
+}
 </style>
 
 <div class="app">

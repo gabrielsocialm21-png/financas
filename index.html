@@ -477,6 +477,15 @@ button.dono:hover{border-color:var(--ink-2);color:var(--ink)}
 .plgrp h4{margin:0;font-size:15px}
 .plgrp .tbtn{font-size:13px;font-weight:700}
 @media (min-width:861px){.plform{grid-template-columns:2fr repeat(5,minmax(0,1fr))}}
+
+/* ===== Rascunho do planejamento (v32) ===== */
+.savebar{position:sticky;bottom:12px;z-index:6;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:12px 14px;border-radius:14px;background:var(--ink);color:var(--bg);box-shadow:0 10px 28px rgba(0,0,0,.35)}
+.savebar span{font-size:14px;font-weight:700}
+.savebar .btn.sec{background:transparent;color:inherit;border:1px solid currentColor}
+.savebar div{display:flex;gap:8px;margin-left:auto}
+.panel{grid-template-columns:minmax(0,1fr)}
+.salvo-ok{font-size:13px;color:var(--muted)}
+@media (max-width:860px){.savebar{bottom:calc(84px + env(safe-area-inset-bottom,0px))}.savebar div{width:100%;margin-left:0}.savebar .btn{flex:1;padding:10px 12px}}
 </style>
 
 <div class="app">
@@ -1531,7 +1540,7 @@ function renderCasa(){const el=$("#casaView");if(!el||!CASA_P.length)return;
   if(!meses.includes(casaSel))casaSel=meses.find(i=>i>=MES_ATUAL)??meses[meses.length-1]??MES_ATUAL;
   const i=casaSel, juntos=soma("sobra",i), inv=soma("inv",i);
   const g=CASA_DOC&&CASA_DOC.guardado!=null&&isFinite(Number(CASA_DOC.guardado))?Number(CASA_DOC.guardado):null, em=g!=null?Number(CASA_DOC.em)||0:MES_ATUAL;
-  const PL=planos(), pl=(k)=>PL.filter(x=>x.on!==false).reduce((a,x)=>a+parcelaEm(x,k),0), FORA=CASA_DOC?.fora||{};
+  const PL=planos(), pl=(k)=>PL.filter(x=>x.on!==false).reduce((a,x)=>a+parcelaEm(x,k),0), FORA={...(PV().fora||{}),...(PV().lixo||{})}, LIXO=PV().lixo||{};
   const foraSum=(k)=>P.reduce((a,p)=>a+p.lista.filter(c=>FORA[p.id+"|"+c.k+"|"+k]).reduce((b,c)=>b+c.v[k],0),0), sj=(k)=>soma("sobra",k)+pl(k)+foraSum(k);
   // Projeção: o guardado informado + o que sobra e o que é investido em cada mês seguinte.
   const prev={};let acc=g??0;for(const k of meses){if(k>em){acc+=sj(k)+soma("inv",k);prev[k]=acc}}
@@ -1557,7 +1566,7 @@ function renderCasa(){const el=$("#casaView");if(!el||!CASA_P.length)return;
       <div class="pessoas">${P.map(p=>`<div class="pessoa"><h4>${esc(p.nome)}</h4>
         <dl><dt>Entrou</dt><dd>${brl.format(p.entrou[i])}</dd><dt>Contas</dt><dd>− ${brl.format(p.saiu[i])}</dd><dt>Investido</dt><dd>− ${brl.format(p.inv[i])}</dd><dt class="tot">Sobrou</dt><dd class="tot${cl(p.sobra[i])}">${brl.format(p.sobra[i])}</dd></dl></div>`).join("")}</div>
     </section>
-    ${painelPlanos(meses,PL,pl,sj,prev,prev0,soma,i,P,FORA,foraSum)}
+    ${painelPlanos(meses,PL,pl,sj,prev,prev0,soma,i,P,FORA,foraSum,LIXO)}
     <section class="panel mm" aria-labelledby="mmT">
       <div class="panel-head"><h3 id="mmT">Mês a mês</h3><span class="sub">${PL.some(x=>x.on!==false)||Object.keys(FORA).length?"Sobra juntos com o planejamento":"Sobra juntos"} · guardado previsto</span></div>
       <ul class="bills">${meses.map(k=>`<li><div class="bill"><span class="nm"><i style="background:${sj(k)<0?"var(--crit)":"var(--accent)"}"></i><span>${nomeMesC(k)} <small>${P.map(p=>`${esc(p.dono)} ${brl0.format(p.sobra[k])}`).join(" · ")}${soma("inv",k)?` · investido ${brl0.format(soma("inv",k))}`:""}${pl(k)?` · planos ${pl(k)>0?"+":"−"}${brl0.format(Math.abs(pl(k)))}`:""}${foraSum(k)?` · ${brl0.format(foraSum(k))} em contas tiradas`:""}</small></span></span>
@@ -1576,7 +1585,10 @@ $("#casaView").addEventListener("submit",async(e)=>{e.preventDefault();if(e.targ
 
 // ===== Calculadora de planejamento da casa (v30) =====
 // Planos ficam em config/casa.planos: {id,nome,tipo:"gasto"|"entrada",valor (por parcela),mes,parc,on}. Não mexem nas contas de ninguém.
-const planos=()=>Array.isArray(CASA_DOC?.planos)?CASA_DOC.planos.filter(x=>x&&x.id&&x.nome&&Number(x.valor)>0):[];
+let PLR=null;try{PLR=JSON.parse(localStorage.getItem("gs26:casaRasc")||"null")}catch(_){}
+const PV=()=>PLR||CASA_DOC||{};
+function rasc(t){try{localStorage.setItem("gs26:casaRasc",JSON.stringify(PLR))}catch(_){}renderCasa();if(t)msgSalvo(t+" Toque em Salvar para guardar.",true)}
+const planos=()=>Array.isArray(PV().planos)?PV().planos.filter(x=>x&&x.id&&x.nome&&Number(x.valor)>0):[];
 const parcelaEm=(x,k)=>k>=Number(x.mes)&&k<Number(x.mes)+(Number(x.parc)||1)?(x.tipo==="entrada"?1:-1)*Number(x.valor):0;
 const mesC=(k)=>k>=NM?"depois de dez/27":k<12?MESES[k].slice(0,3).toLowerCase():MESES[k-12].slice(0,3).toLowerCase()+"/27";
 let plRasc={nome:"",valor:"",mes:"",parc:"1",tipo:"gasto",quem:"casa",metaV:"",metaAte:""};
@@ -1592,7 +1604,7 @@ function metaTxt(meses,sj,soma){const v=numBR(plRasc.metaV),ate=Number(plRasc.me
   return `Para juntar <b>${brl.format(v)}</b> até ${nomeMesC(ate).toLowerCase()}, vocês precisam separar <b>${brl.format(por)} por mês</b> durante ${n} ${n===1?"mês":"meses"}. `+
     (disp>=v?`Pela previsão, sobram ${brl.format(med)} por mês nesse período, então <b>dá</b> e ainda ficam ${brl.format(disp-v)}.`:`Pela previsão, sobram só ${brl.format(Math.max(0,med))} por mês nesse período. <b class="neg">Faltam ${brl.format(v-Math.max(0,disp))}</b>: cortem gastos ou estendam o prazo.`)}
 const quemNome=(q)=>q&&q!=="casa"?(CASA_P.find(p=>p.id===q)?.dono||"Casa"):"Casa";
-function painelPlanos(meses,PL,pl,sj,prev,prev0,soma,i,P,FORA,foraSum){
+function painelPlanos(meses,PL,pl,sj,prev,prev0,soma,i,P,FORA,foraSum,LIXO){
   const fut=meses.filter(k=>k>=MES_ATUAL), ativos=PL.filter(x=>x.on!==false);
   const gastos=ativos.filter(x=>x.tipo!=="entrada").reduce((a,x)=>a+x.valor*(Number(x.parc)||1),0), entradas=ativos.filter(x=>x.tipo==="entrada").reduce((a,x)=>a+x.valor*(Number(x.parc)||1),0);
   const pior=fut.reduce((m,k)=>m==null||sj(k)<sj(m)?k:m,null), fim=fut.filter(k=>k in prev).pop();
@@ -1605,10 +1617,12 @@ function painelPlanos(meses,PL,pl,sj,prev,prev0,soma,i,P,FORA,foraSum){
       <span class="v">${x.tipo==="entrada"?"+":"−"} ${brl.format(emMes?x.valor:x.valor*(Number(x.parc)||1))}</span>
       <span class="acts"><button class="ib ${on?"on":"ok"}" type="button" data-plon="${esc(x.id)}" aria-pressed="${on}" aria-label="${on?"Tirar da simulação":"Incluir na simulação"} ${esc(x.nome)}" title="${on?"Incluído · toque para tirar":"Incluir"}">${IC.check}</button><button class="ib del" type="button" data-plrm="${esc(x.id)}" aria-label="Apagar ${esc(x.nome)}" title="Apagar">${IC.trash}</button></span></div></li>`};
   const contasP=P.map(p=>{const cs=p.lista.filter(c=>c.v[i]>0).sort((a,b)=>b.v[i]-a.v[i]);if(!cs.length)return "";
+    const apag=cs.filter(c=>LIXO[p.id+"|"+c.k+"|"+i]);cs.splice(0,cs.length,...cs.filter(c=>!LIXO[p.id+"|"+c.k+"|"+i]));
     const fora=cs.filter(c=>FORA[p.id+"|"+c.k+"|"+i]), tot=cs.reduce((a,c)=>a+c.v[i],0)-fora.reduce((a,c)=>a+c.v[i],0);
     return `<div class="plgrp"><h4>Contas de ${esc(p.dono)} · ${brl.format(tot)}</h4><button class="tbtn" type="button" data-ctodas="${esc(p.id)}" data-on="${fora.length?"1":"0"}">${fora.length?"Incluir todas":"Tirar todas"}</button></div>
       <ul class="bills">${cs.map(c=>{const key=p.id+"|"+c.k+"|"+i, on=!FORA[key];return `<li><div class="bill${on?"":" off"}"><span class="nm"><i style="background:var(--out)"></i><span>${esc(c.n)}<span class="dono">${esc(p.dono)}</span> <small>${on?"Conta que já existe":"Fora da simulação"}</small></span></span>
-        <span class="v">− ${brl.format(c.v[i])}</span><span class="acts"><button class="ib ${on?"on":"ok"}" type="button" data-cfora="${esc(key)}" aria-pressed="${on}" aria-label="${on?"Tirar da simulação":"Incluir na simulação"} ${esc(c.n)} de ${esc(p.dono)}" title="${on?"Incluída · toque para tirar":"Incluir"}">${IC.check}</button></span></div></li>`}).join("")}</ul>`}).join("");
+        <span class="v">− ${brl.format(c.v[i])}</span><span class="acts"><button class="ib ${on?"on":"ok"}" type="button" data-cfora="${esc(key)}" aria-pressed="${on}" aria-label="${on?"Tirar da simulação":"Incluir na simulação"} ${esc(c.n)} de ${esc(p.dono)}" title="${on?"Incluída · toque para tirar":"Incluir"}">${IC.check}</button><button class="ib del" type="button" data-clixo="${esc(key)}" aria-label="Apagar ${esc(c.n)} de ${esc(p.dono)} do planejamento" title="Apagar do planejamento">${IC.trash}</button></span></div></li>`}).join("")}</ul>
+      ${apag.length?`<p class="sub">${apag.length} ${apag.length===1?"conta apagada":"contas apagadas"} do planejamento de ${esc(p.dono)} (${apag.map(c=>esc(c.n)).join(", ")}). <button class="tbtn" type="button" data-crest="${esc(p.id)}">Trazer de volta</button></p>`:""}`}).join("");
   return `<section class="panel" aria-labelledby="plT">
     <div class="panel-head"><h3 id="plT">Planejar ${nomeMes(i).toLowerCase()}</h3><span class="sub">Inclua ou tire contas e lance planos. Nada aqui muda as contas de cada um.</span></div>
     <div class="chips" role="group" aria-label="Mês do planejamento">${meses.filter(k=>k>=MES_ATUAL).map(k=>`<button class="chip" type="button" data-cmes="${k}" aria-pressed="${k===i}">${mesC(k)}</button>`).join("")}</div>
@@ -1635,6 +1649,7 @@ function painelPlanos(meses,PL,pl,sj,prev,prev0,soma,i,P,FORA,foraSum){
       ${pior!=null?`<div><span>Mês mais apertado</span><b class="${sj(pior)<0?"neg":""}">${brl.format(sj(pior))}</b><small>${nomeMesC(pior)}${sj(pior)<0?", falta dinheiro":""}</small></div>`:""}
       ${fim!=null?`<div><span>Guardado em ${mesC(fim)}</span><b>${brl.format(prev[fim])}</b><small>Sem o planejamento: ${brl0.format(prev0[fim])}</small></div>`:""}
     </div>`:""}
+    ${PLR?`<div class="savebar" role="region" aria-label="Salvar planejamento"><span>Mudanças ainda não salvas</span><div><button class="btn sec" type="button" data-pldesc>Descartar</button><button class="btn" type="button" data-plsalvar>Salvar</button></div></div>`:`<p class="salvo-ok">Planejamento salvo para os dois.</p>`}
     <div style="display:grid;gap:10px;border-top:1px solid var(--line);padding-top:14px">
       <h4 style="margin:0;font-size:15px">Meta: quanto juntar</h4>
       <div class="metacalc"><label class="lbl">Quero juntar (R$)<input class="campo" id="metaV" inputmode="decimal" placeholder="10.000,00" value="${esc(plRasc.metaV)}" autocomplete="off"></label>
@@ -1646,21 +1661,25 @@ function addPlano(){const nome=$("#plNome").value.replace(/[<>&"]/g,"").trim(),v
   if(!nome){msgSalvo("Escreva o que é, por exemplo Viagem.",true);$("#plNome").focus();return}
   if(!isFinite(valor)||valor<=0){msgSalvo("Digite o valor da parcela como 500,00.",true);$("#plValor").focus();return}
   const x={id:"p"+Date.now().toString(36),nome,tipo:$("#plTipo").value,valor,mes:Number($("#plMes").value),parc:Math.min(Number($("#plParc").value)||1,NM-Number($("#plMes").value)),quem:$("#plQuem").value||"casa",on:true};
-  CASA_DOC={...(CASA_DOC||{}),planos:[...planos(),x]};plRasc={...plRasc,nome:"",valor:"",parc:"1"};guardaRasc();
-  salvarCasa(`${nome} entrou no plano: ${descPlano(x)}.`)}
+  PLR={...PV(),planos:[...planos(),x]};plRasc={...plRasc,nome:"",valor:"",parc:"1"};guardaRasc();
+  rasc(`${nome} entrou no plano: ${descPlano(x)}.`)}
 $("#casaView").addEventListener("input",(e)=>{const m={plNome:"nome",plValor:"valor",metaV:"metaV"}[e.target.id];if(!m)return;plRasc[m]=e.target.value;guardaRasc();
   if(m==="metaV")renderCasa(),(()=>{const f=$("#metaV");f.focus();f.setSelectionRange(f.value.length,f.value.length)})()});
 $("#casaView").addEventListener("change",(e)=>{const m={plTipo:"tipo",plMes:"mes",plParc:"parc",metaAte:"metaAte",plQuem:"quem"}[e.target.id];if(!m)return;plRasc[m]=e.target.value;guardaRasc();
   if(m==="mes"&&Number(plRasc.parc)>NM-Number(plRasc.mes))plRasc.parc=String(NM-Number(plRasc.mes));
   if(m==="metaAte"||m==="mes"){renderCasa();$("#"+e.target.id).focus()}});
 $("#casaView").addEventListener("click",(e)=>{
-  const t=e.target.closest("[data-plon]");if(t){CASA_DOC={...CASA_DOC,planos:planos().map(x=>x.id===t.dataset.plon?{...x,on:x.on===false}:x)};const x=planos().find(y=>y.id===t.dataset.plon);salvarCasa(x.on===false?`${x.nome} saiu do cálculo.`:`${x.nome} voltou ao cálculo.`);return}
-  const f=e.target.closest("[data-cfora]");if(f){const k=f.dataset.cfora,fo={...(CASA_DOC?.fora||{})};if(fo[k])delete fo[k];else fo[k]=true;CASA_DOC={...(CASA_DOC||{}),fora:fo};salvarCasa(fo[k]?"Conta tirada da simulação.":"Conta incluída de novo.");return}
-  const ct=e.target.closest("[data-ctodas]");if(ct){const p=CASA_P.find(x=>x.id===ct.dataset.ctodas);if(!p)return;const fo={...(CASA_DOC?.fora||{})},incluir=ct.dataset.on==="1";
+  const t=e.target.closest("[data-plon]");if(t){PLR={...PV(),planos:planos().map(x=>x.id===t.dataset.plon?{...x,on:x.on===false}:x)};const x=planos().find(y=>y.id===t.dataset.plon);rasc(x.on===false?`${x.nome} saiu do cálculo.`:`${x.nome} voltou ao cálculo.`);return}
+  const f=e.target.closest("[data-cfora]");if(f){const k=f.dataset.cfora,fo={...(PV().fora||{})};if(fo[k])delete fo[k];else fo[k]=true;PLR={...PV(),fora:fo};rasc(fo[k]?"Conta tirada da simulação.":"Conta incluída de novo.");return}
+  const ct=e.target.closest("[data-ctodas]");if(ct){const p=CASA_P.find(x=>x.id===ct.dataset.ctodas);if(!p)return;const fo={...(PV().fora||{})},incluir=ct.dataset.on==="1";
     for(const c of p.lista)if(c.v[casaSel]>0){const k=p.id+"|"+c.k+"|"+casaSel;if(incluir)delete fo[k];else fo[k]=true}
-    CASA_DOC={...(CASA_DOC||{}),fora:fo};salvarCasa(incluir?`Contas de ${p.dono} incluídas.`:`Contas de ${p.dono} tiradas da simulação.`);return}
-  const q=e.target.closest("[data-plquem]");if(q){const ord=["casa",...CASA_P.map(p=>p.id)];CASA_DOC={...CASA_DOC,planos:planos().map(x=>x.id===q.dataset.plquem?{...x,quem:ord[(ord.indexOf(x.quem||"casa")+1)%ord.length]}:x)};const x=planos().find(y=>y.id===q.dataset.plquem);salvarCasa(`${x.nome} agora é de ${quemNome(x.quem)}.`);return}
-  const r=e.target.closest("[data-plrm]");if(r){const x=planos().find(y=>y.id===r.dataset.plrm);CASA_DOC={...CASA_DOC,planos:planos().filter(y=>y.id!==r.dataset.plrm)};salvarCasa(x?`${x.nome} removido do plano.`:"")}});
+    PLR={...PV(),fora:fo};rasc(incluir?`Contas de ${p.dono} incluídas.`:`Contas de ${p.dono} tiradas da simulação.`);return}
+  const q=e.target.closest("[data-plquem]");if(q){const ord=["casa",...CASA_P.map(p=>p.id)];PLR={...PV(),planos:planos().map(x=>x.id===q.dataset.plquem?{...x,quem:ord[(ord.indexOf(x.quem||"casa")+1)%ord.length]}:x)};const x=planos().find(y=>y.id===q.dataset.plquem);rasc(`${x.nome} agora é de ${quemNome(x.quem)}.`);return}
+  const lx=e.target.closest("[data-clixo]");if(lx){const k=lx.dataset.clixo,base=PV();PLR={...base,lixo:{...(base.lixo||{}),[k]:true}};rasc("Conta apagada do planejamento. Ela continua no perfil de quem é.");return}
+  const rs=e.target.closest("[data-crest]");if(rs){const base=PV(),pre=rs.dataset.crest+"|";PLR={...base,lixo:Object.fromEntries(Object.entries(base.lixo||{}).filter(([k])=>!(k.startsWith(pre)&&k.endsWith("|"+casaSel))))};rasc("Contas de volta ao planejamento.");return}
+  if(e.target.closest("[data-pldesc]")){PLR=null;try{localStorage.removeItem("gs26:casaRasc")}catch(_){}renderCasa();msgSalvo("Mudanças descartadas.",true);return}
+  if(e.target.closest("[data-plsalvar]")){CASA_DOC={...(CASA_DOC||{}),planos:planos(),fora:{...(PLR.fora||{})},lixo:{...(PLR.lixo||{})}};PLR=null;try{localStorage.removeItem("gs26:casaRasc")}catch(_){}salvarCasa("Planejamento salvo.");return}
+  const r=e.target.closest("[data-plrm]");if(r){const x=planos().find(y=>y.id===r.dataset.plrm);PLR={...PV(),planos:planos().filter(y=>y.id!==r.dataset.plrm)};rasc(x?`${x.nome} removido do plano.`:"")}});
 const chaveLocal=()=>PERFIL==="gabriel"?"gs26:org":"gs26:org:"+PERFIL;
 const docDe=(id)=>id==="gabriel"?"config/organizacao":"config/perfil-"+id;
 let dbApi=null, orgUnsub=null;

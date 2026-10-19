@@ -794,7 +794,14 @@ let RECEITA_BASE=m({}), RECEITA=RECEITA_BASE.slice();
 const somaLanc=(tipo,i)=>(ORG.lanc||[]).filter(l=>l.tipo===tipo&&Number(l.mes)===Number(i)).reduce((a,l)=>a+(Number(l.v)||0),0);
 const extraMes=(i)=>somaLanc("receita",i);
 const investMes=(i)=>somaLanc("invest",i);
-function montarReceita(){RECEITA=RECEITA_BASE.map((v,i)=>v+extraMes(i))}
+function montarReceita(){const ent=oficialDe().planos.filter(x=>x.tipo==="entrada");RECEITA=RECEITA_BASE.map((v,i)=>v+extraMes(i)+ent.reduce((a,x)=>a+Math.abs(parcelaEm(x,i)),0))}
+// Planejamento oficial (salvo na Casa) visto por uma pessoa. Na montagem da Casa não se aplica: lá ele entra pelo próprio planejador.
+let montandoCasa=false;
+function oficialDe(){let pid,D;try{pid=PERFIL;D=CASA_DOC||{}}catch(_){return {planos:[],corta:()=>false}}
+  if(montandoCasa||!D.oficial||!pid||pid==="__todos")return {planos:[],corta:()=>false};
+  const cortes=D.corte||{}, pre=pid+"|";
+  return {planos:(Array.isArray(D.planos)?D.planos:[]).filter(x=>x&&x.on!==false&&x.quem===pid&&Number(x.valor)>0),
+    corta:(k,i)=>{const rs=[].concat(cortes[pre+k]||[]);return i==null?rs.length>0:rs.some(r=>i>=Number(r.de)&&(r.ate==null||i<=Number(r.ate)))}}}
 let OFERTA=m({});
 let CATS=BASE_CATS.slice(), ORG={cats:[],atrib:{},status:{},mesesArq:[],lanc:[],extras:[]};
 const ativo=(i)=>!ORG.mesesArq.includes(i);
@@ -1092,7 +1099,9 @@ function montarCats(){
 // Contas incluídas no dashboard (fora da planilha) entram junto com as da planilha.
 function arquivar(contas){
   const ex=(ORG.extras||[]).map(e=>({n:e.n,c:e.c,v:e.fixa?m(span(Number(e.desde)||0,NM-1,Number(e.valor)||0)):m(e.v),extra:true,rep:!!e.rep,id:e.id,fixa:!!e.fixa,info:e.info||{},dia:(e.rep&&Number(ORG.dias?.[chave(e.n)]))||Number(e.dia)||0}));
-  return [...contas.filter(c=>!c.extra),...ex].map(c=>{const k=chave(c.n),c0=c.c0||c.c,esc0=ORG.atrib[k];
+  const of=oficialDe();
+  const pls=of.planos.filter(x=>x.tipo!=="entrada").map(x=>({n:x.nome,c:"outros",v:Array.from({length:NM},(_,i)=>Math.abs(parcelaEm(x,i))),fixo:true,plano:true,info:{},dia:0}));
+  return [...contas.filter(c=>!c.extra&&!c.plano),...ex,...pls].map(c=>of.corta(chave(c.n))?{...c,v:c.v.map((x,i)=>of.corta(chave(c.n),i)?0:x)}:c).map(c=>{const k=chave(c.n),c0=c.c0||c.c,esc0=ORG.atrib[k];
     const ok=esc0&&CATS.some(x=>x.id===esc0);
     return {...c,c0,c:ok?esc0:(ARQUIVADAS(k)&&!c.extra&&!c.fixo?"arq":c0),dia:c.extra||c.fixo?c.dia:(Number(ORG.dias?.[k])||0)}});
 }
@@ -1713,7 +1722,8 @@ const CASA={id:"__todos",nome:"Casa (todos)"}, ORGS={}, assinados={};
 let CASA_P=[], casaSel=MES_ATUAL, CASA_DOC=null, casaEdit=false;
 try{CASA_DOC=JSON.parse(localStorage.getItem("gs26:casa")||"null")}catch(_){}
 const lerOrgLocal=(id)=>{try{return JSON.parse(localStorage.getItem(id==="gabriel"?"gs26:org":"gs26:org:"+id)||"null")}catch(_){return null}};
-function montarCasa(){
+function montarCasa(){montandoCasa=true;try{montarCasa0()}finally{montandoCasa=false}}
+function montarCasa0(){
   const partes=PERFIS.map(p=>{
     PERFIL=p.id;ORG=normOrg(ORGS[p.id]||lerOrgLocal(p.id)||{});base();montarCats();montarReceita();
     const dono=p.nome.split(/\s+/)[0], contas=arquivar(CONTAS).map(c=>({n:`${c.n} · ${dono}`,c:BASE_CATS.some(x=>x.id===c.c)?c.c:"outros",fixo:true,dia:c.dia,info:c.info,v:c.v.slice(),st:c.v.map((_,i)=>stOf(c,i))}));
@@ -1732,8 +1742,11 @@ function montarCasa(){
   if(!temDados(sel)){const d=ANO.find(i=>i>=MES_ATUAL&&temDados(i))??ANO.filter(temDados).pop();if(d!=null)sel=d}
   renderTudo();
 }
+function refazPerfil(){if(PERFIL==="__todos"||!ORG)return;base();montarCats();montarReceita();montarAno();CONTAS=arquivar(CONTAS);renderTudo()}
+function assinarCasa(){if(!dbApi||assinados.__casa)return;assinados.__casa=true;
+  dbApi.doc("config/casa").onSnapshot(sn=>{if(!sn.exists)return;CASA_DOC=sn.data();try{localStorage.setItem("gs26:casa",JSON.stringify(CASA_DOC))}catch(_){}if(PERFIL==="__todos")renderCasa();else refazPerfil()},()=>{})}
 function assinarTodos(){if(!dbApi)return;
-  if(!assinados.__casa){assinados.__casa=true;dbApi.doc("config/casa").onSnapshot(sn=>{if(!sn.exists)return;CASA_DOC=sn.data();try{localStorage.setItem("gs26:casa",JSON.stringify(CASA_DOC))}catch(_){}if(PERFIL==="__todos")renderCasa()},()=>{})}
+  assinarCasa();
   for(const p of PERFIS){if(assinados[p.id])continue;assinados[p.id]=true;
   dbApi.doc(docDe(p.id)).onSnapshot(sn=>{ORGS[p.id]=sn.exists?sn.data():{};if(PERFIL==="__todos")montarCasa()},()=>{})}}
 function renderPerfis(){
@@ -1801,6 +1814,7 @@ renderContas();
     dbApi=window.claude?.use?await window.claude.use("db"):null;
     if(!dbApi)return;
     await enviarPendentes();
+    assinarCasa();
     dbApi.doc("config/perfis").onSnapshot(sn=>{if(sn.exists){const l=sn.data().lista;usarPerfis(l);try{localStorage.setItem("gs26:perfis",JSON.stringify(PERFIS))}catch(_){}
       if(perfilIni!=="gabriel"&&PERFIL==="gabriel"&&(PERFIS.some(p=>p.id===perfilIni)||perfilIni===CASA.id&&PERFIS.length>1)){trocarPerfil(perfilIni)}}},()=>{});
     trocarPerfil(PERFIL);

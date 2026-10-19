@@ -1,6 +1,6 @@
 // Sobra: guarda a página e as bibliotecas para abrir sem internet.
 // Os dados (contas, pagamentos) ficam no aparelho pelo próprio app; aqui só entra o que é arquivo.
-const VERSAO = "sobra-v8";
+const VERSAO = "sobra-v9";
 const BASE = ["./", "./index.html", "./config.js", "./manifest.webmanifest", "./icons/icon-192.png", "./icons/logo.svg"];
 
 self.addEventListener("install", (e) => {

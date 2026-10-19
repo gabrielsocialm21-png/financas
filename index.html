@@ -1606,21 +1606,21 @@ $("#casaView").addEventListener("click",(e)=>{
   if(e.target.closest("#gCanc")){casaEdit=false;renderCasa()}});
 $("#casaView").addEventListener("submit",async(e)=>{e.preventDefault();if(e.target.id==="plForm"){addPlano();return}const v=numBR($("#gVal").value);
   if(!isFinite(v)||v<0){msgSalvo("Digite o valor como 10.000,00.",true);$("#gVal").focus();return}
-  CASA_DOC={...(CASA_DOC||{}),guardado:v,em:MES_ATUAL,data:new Date().toISOString()};casaEdit=false;try{localStorage.setItem("gs26:casa",JSON.stringify(CASA_DOC))}catch(_){}renderCasa();
+  CASA_DOC={...(CASA_DOC||{}),guardado:v,em:MES_ATUAL,data:new Date().toISOString(),rev:Date.now()};casaEdit=false;try{localStorage.setItem("gs26:casa",JSON.stringify(CASA_DOC))}catch(_){}renderCasa();
   try{if(dbApi)await dbApi.doc("config/casa").set(CASA_DOC);msgSalvo(`Guardado atualizado para ${brl.format(v)}.`,true)}catch(_){msgSalvo("Sem conexão: o valor ficou salvo neste aparelho.",true)}});
 
 // ===== Calculadora de planejamento da casa (v30) =====
 // Planos ficam em config/casa.planos: {id,nome,tipo:"gasto"|"entrada",valor (por parcela),mes,parc,on}. Não mexem nas contas de ninguém.
 let PLR=null;try{PLR=JSON.parse(localStorage.getItem("gs26:casaRasc")||"null")}catch(_){}
 const PV=()=>PLR||CASA_DOC||{};
-function rasc(t){try{localStorage.setItem("gs26:casaRasc",JSON.stringify(PLR))}catch(_){}renderCasa();if(t)msgSalvo(t+" Toque em Salvar para guardar.",true)}
+function rasc(t){if(PLR&&PLR.base==null)PLR.base=Number(CASA_DOC?.rev||0);try{localStorage.setItem("gs26:casaRasc",JSON.stringify(PLR))}catch(_){}renderCasa();if(t)msgSalvo(t+" Toque em Salvar para guardar.",true)}
 const planos=()=>Array.isArray(PV().planos)?PV().planos.filter(x=>x&&x.id&&x.nome&&Number(x.valor)>0):[];
 const parcelaEm=(x,k)=>(x.rec?k>=Number(x.mes)&&(x.ate==null||k<=Number(x.ate)):k>=Number(x.mes)&&k<Number(x.mes)+(Number(x.parc)||1))?(x.tipo==="entrada"?1:-1)*Number(x.valor):0;
 const mesC=(k)=>k>=NM?"depois de dez/27":k<12?MESES[k].slice(0,3).toLowerCase():MESES[k-12].slice(0,3).toLowerCase()+"/27";
 let plRasc={nome:"",valor:"",mes:"",parc:"1",tipo:"gasto",quem:"casa",metaV:"",metaAte:""};
 try{plRasc={...plRasc,...JSON.parse(localStorage.getItem("gs26:plRasc")||"{}")}}catch(_){}
 const guardaRasc=()=>{try{localStorage.setItem("gs26:plRasc",JSON.stringify(plRasc))}catch(_){}};
-async function salvarCasa(t){try{localStorage.setItem("gs26:casa",JSON.stringify(CASA_DOC))}catch(_){}renderCasa();
+async function salvarCasa(t){CASA_DOC={...(CASA_DOC||{}),rev:Date.now()};try{localStorage.setItem("gs26:casa",JSON.stringify(CASA_DOC))}catch(_){}renderCasa();
   try{if(dbApi)await dbApi.doc("config/casa").set(CASA_DOC);if(t)msgSalvo(t,true)}catch(_){msgSalvo("Sem conexão: ficou salvo neste aparelho.",true)}}
 function descPlano(x){const n=Number(x.parc)||1,a=Number(x.mes);if(x.rec)return `${brl.format(x.valor)} por mês desde ${mesC(a)}${x.ate!=null?` até ${mesC(Number(x.ate))}`:", até mudar o planejamento"}`;return n>1?`${n}x de ${brl.format(x.valor)}, de ${mesC(a)} a ${mesC(a+n-1)}`:`${brl.format(x.valor)} em ${mesC(a)}`}
 function metaTxt(meses,sj,soma){const v=numBR(plRasc.metaV),ate=Number(plRasc.metaAte);
@@ -1671,7 +1671,7 @@ function painelPlanos(meses,PL,pl,sj,prev,prev0,soma,i,P,FORA,foraSum,LIXO){
     ${contasP}
     ${outros.length?`<details><summary style="cursor:pointer;font-weight:700">Planos em outros meses (${outros.length})</summary><ul class="bills" style="margin-top:8px">${outros.map(x=>linhaPlano(x,false)).join("")}</ul></details>`:""}
     ${ativos.length||Object.keys(FORA).length?`<div class="plres">
-      ${ativos.length?`<div><span>Todos os planos</span><b>${brl.format(entradas-gastos)}</b><small>${gastos?`${brl0.format(gastos)} em gastos`:""}${gastos&&entradas?" · ":""}${entradas?`${brl0.format(entradas)} em entradas`:""}</small></div>`:""}
+      ${ativos.length?`<div><span>Planos em ${mesC(i)}</span><b>${brl.format(pl(i))}</b><small>${doMes.filter(x=>x.on!==false).length} ${doMes.filter(x=>x.on!==false).length===1?"plano":"planos"} neste mês</small></div>`:""}
       ${pior!=null?`<div><span>Mês mais apertado</span><b class="${sj(pior)<0?"neg":""}">${brl.format(sj(pior))}</b><small>${nomeMesC(pior)}${sj(pior)<0?", falta dinheiro":""}</small></div>`:""}
       ${fim!=null?`<div><span>Guardado em ${mesC(fim)}</span><b>${brl.format(prev[fim])}</b><small>Sem o planejamento: ${brl0.format(prev0[fim])}</small></div>`:""}
     </div>`:""}
@@ -1698,7 +1698,8 @@ $("#casaView").addEventListener("change",(e)=>{const m={plTipo:"tipo",plMes:"mes
 $("#casaView").addEventListener("click",(e)=>{
   const t=e.target.closest("[data-plon]");if(t){PLR={...PV(),planos:planos().map(x=>x.id===t.dataset.plon?{...x,on:x.on===false}:x)};const x=planos().find(y=>y.id===t.dataset.plon);rasc(x.on===false?`${x.nome} saiu do cálculo.`:`${x.nome} voltou ao cálculo.`);return}
   const f=e.target.closest("[data-cfora]");if(f){const k=f.dataset.cfora,fo={...(PV().fora||{})};if(fo[k])delete fo[k];else fo[k]=true;PLR={...PV(),fora:fo};rasc(fo[k]?"Conta tirada da simulação.":"Conta incluída de novo.");return}
-  const ct=e.target.closest("[data-ctodas]");if(ct){const p=CASA_P.find(x=>x.id===ct.dataset.ctodas);if(!p)return;const fo={...(PV().fora||{})},incluir=ct.dataset.on==="1";
+  const ct=e.target.closest("[data-ctodas]");if(ct){const p=CASA_P.find(x=>x.id===ct.dataset.ctodas);if(!p)return;
+    if(ct.dataset.on!=="1"&&ct.dataset.conf!=="1"){ct.dataset.conf="1";ct.textContent=`Toque de novo para tirar todas de ${p.dono}`;setTimeout(()=>{if(ct.isConnected){ct.dataset.conf="";ct.textContent="Tirar todas"}},4000);return}const fo={...(PV().fora||{})},incluir=ct.dataset.on==="1";
     for(const c of p.lista)if(c.v[casaSel]>0){const k=p.id+"|"+c.k+"|"+casaSel;if(incluir)delete fo[k];else fo[k]=true}
     PLR={...PV(),fora:fo};rasc(incluir?`Contas de ${p.dono} incluídas.`:`Contas de ${p.dono} tiradas da simulação.`);return}
   const q=e.target.closest("[data-plquem]");if(q){const ord=["casa",...CASA_P.map(p=>p.id)];PLR={...PV(),planos:planos().map(x=>x.id===q.dataset.plquem?{...x,quem:ord[(ord.indexOf(x.quem||"casa")+1)%ord.length]}:x)};const x=planos().find(y=>y.id===q.dataset.plquem);rasc(`${x.nome} agora é de ${quemNome(x.quem)}.`);return}
@@ -1755,7 +1756,10 @@ function montarCasa0(){
 }
 function refazPerfil(){if(PERFIL==="__todos"||!ORG)return;base();montarCats();montarReceita();montarAno();CONTAS=arquivar(CONTAS);renderTudo()}
 function assinarCasa(){if(!dbApi||assinados.__casa)return;assinados.__casa=true;
-  dbApi.doc("config/casa").onSnapshot(sn=>{if(!sn.exists)return;CASA_DOC=sn.data();try{localStorage.setItem("gs26:casa",JSON.stringify(CASA_DOC))}catch(_){}if(PERFIL==="__todos")renderCasa();else refazPerfil()},()=>{})}
+  dbApi.doc("config/casa").onSnapshot(sn=>{if(!sn.exists)return;const novo=sn.data()||{};if(Number(novo.rev||0)<Number(CASA_DOC?.rev||0))return;
+    // Rascunho feito sobre uma versão mais antiga do planejamento é descartado quando chega uma versão nova.
+    if(PLR&&Number(PLR.base||0)<Number(novo.rev||0)&&Number(novo.rev||0)!==Number(CASA_DOC?.rev||0)){PLR=null;try{localStorage.removeItem("gs26:casaRasc")}catch(_){}}
+    CASA_DOC=novo;try{localStorage.setItem("gs26:casa",JSON.stringify(CASA_DOC))}catch(_){}if(PERFIL==="__todos")renderCasa();else refazPerfil()},()=>{})}
 function assinarTodos(){if(!dbApi)return;
   assinarCasa();
   for(const p of PERFIS){if(assinados[p.id])continue;assinados[p.id]=true;

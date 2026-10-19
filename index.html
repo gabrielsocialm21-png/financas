@@ -573,6 +573,10 @@ button.dono:hover{border-color:var(--ink-2);color:var(--ink)}
         <div class="tbl"><table class="gerir"><thead><tr><th>Conta</th><th>Categoria</th><th>Vence dia</th><th class="num">Total no ano</th><th>Situação</th><th></th></tr></thead><tbody id="listaContas"></tbody></table></div>
         <p class="salvo" id="salvoMsg" aria-live="polite"></p>
       </section>
+      <section class="panel" id="arqBox" hidden>
+        <div class="panel-head"><h3>Arquivadas</h3><span class="sub" id="nArq"></span></div>
+        <ul class="bills" id="listaArq"></ul>
+      </section>
       <section class="panel">
         <div class="panel-head"><h3>Meses</h3><span class="sub">Meses arquivados saem da régua, dos totais do ano e de A pagar</span></div>
         <div class="toolbar" id="listaMeses"></div>
@@ -1097,7 +1101,11 @@ function montarCats(){
   CATS=[...BASE_CATS.filter(c=>c.id!=="arq"),...ORG.cats.map(c=>({...c,custom:true})),arq];
 }
 // Contas incluídas no dashboard (fora da planilha) entram junto com as da planilha.
-function arquivar(contas){
+// CONTAS guarda só as contas vivas; as arquivadas ficam em ARQ e não entram em nenhum total.
+var ARQ;
+const nArq=()=>(ARQ||[]).filter(c=>!c.rep).length;
+function arquivar(contas){const t=arquivar0(contas);let casa=false;try{casa=montandoCasa}catch(_){}if(!casa)ARQ=t.filter(c=>c.c==="arq");return t.filter(c=>c.c!=="arq")}
+function arquivar0(contas){
   const ex=(ORG.extras||[]).map(e=>({n:e.n,c:e.c,v:e.fixa?m(span(Number(e.desde)||0,NM-1,Number(e.valor)||0)):m(e.v),extra:true,rep:!!e.rep,id:e.id,fixa:!!e.fixa,info:e.info||{},dia:(e.rep&&Number(ORG.dias?.[chave(e.n)]))||Number(e.dia)||0}));
   const of=oficialDe();
   const pls=of.planos.filter(x=>x.tipo!=="entrada").map(x=>({n:x.nome,c:"outros",v:Array.from({length:NM},(_,i)=>Math.abs(parcelaEm(x,i))),fixo:true,plano:true,info:{},dia:0}));
@@ -1201,14 +1209,14 @@ function renderPend(){
 }
 
 function renderNav(){
-  $("#navCats").innerHTML=CATS.filter(c=>totalCat(c.id)>0||c.custom).map(c=>`<a href="#cat-${c.id}"><i style="background:var(${c.cor})"></i>${c.nome}<span class="t">${brl0.format(totalCat(c.id))}</span></a>`).join("");
+  $("#navCats").innerHTML=CATS.filter(c=>c.id==="arq"?nArq():totalCat(c.id)>0||c.custom).map(c=>`<a href="#cat-${c.id}"><i style="background:var(${c.cor})"></i>${c.nome}<span class="t">${c.id==="arq"?`${nArq()} ${nArq()===1?"conta":"contas"}`:brl0.format(totalCat(c.id))}</span></a>`).join("");
   const side=$(".side"),btn=$("#menuBtn");
   btn.onclick=()=>{const on=!side.classList.contains("open");side.classList.toggle("open",on);btn.setAttribute("aria-expanded",on);btn.textContent=on?"Fechar":"Menu"};
 }
 
 function renderCat(id){
   const c=CATS.find(x=>x.id===id); if(!c)return false;
-  const contas=CONTAS.filter(x=>x.c===id);
+  const contas=id==="arq"?(ARQ||[]).filter(c=>!c.rep):CONTAS.filter(x=>x.c===id);
   const porMes=ANO.map(i=>contas.reduce((a,x)=>a+x.v[i],0));
   const tot=porMes.reduce((a,b)=>a+b,0), ativos=porMes.filter(Boolean).length;
   const todas=ANO.reduce((a,i)=>a+despesas(i),0), max=Math.max(...porMes,1);
@@ -1217,7 +1225,7 @@ function renderCat(id){
   $("#catView").innerHTML=`
     <header><div>
       <div class="cat-title"><i style="background:var(${c.cor})"></i><h1>${c.nome}</h1></div>
-      <p class="sub">${id==="arq"?"Contas que já terminaram. Elas continuam contando nos meses em que foram pagas.":`${contas.length} ${contas.length>1?"contas":"conta"}: ${contas.map(x=>esc(x.n)).join(", ")}`}</p>
+      <p class="sub">${id==="arq"?`Contas arquivadas não aparecem nas listas e não contam em nenhum total. Para voltar a contar, use Restaurar em <a href="#contas">Organizar contas</a>.`:`${contas.length} ${contas.length>1?"contas":"conta"}: ${contas.map(x=>esc(x.n)).join(", ")}`}</p>
     </div></header>
     <div class="figs">
       <div class="fig"><span>Total no ano</span><b>${brl.format(tot)}</b><small>${ativos} ${ativos>1?"meses":"mês"} com gastos</small></div>
@@ -1289,7 +1297,9 @@ function renderContas(){
       <td><span>${pend?`<span class="st pendente">${pend} ${pend>1?"pendentes":"pendente"}</span>`:`<span class="st pago">Em dia</span>`}${rp?`<span class="rep-tag">Repete ${brl.format(rp.valor)} por mês desde ${nomeMesC(Number(rp.desde)).toLowerCase()}</span>`:""}</span></td>
       <td class="acoes">${!c.extra&&!arq&&ult>=0?(rp?`<button class="btn sec" data-rep="${k}">Parar de repetir</button>`:ult<NM-1?`<button class="btn sec" data-rep="${k}" title="Repetir ${brl.format(c.v[ult])} todo mês a partir de ${nomeMesC(ult+1).toLowerCase()}">Repetir</button>`:""):""}<button class="btn sec" data-arq="${k}">${arq?"Restaurar":"Arquivar"}</button></td></tr>`}).join("")
     :`<tr><td colspan="6" class="sub">Nenhuma conta encontrada para "${esc(filtro)}".</td></tr>`;
-  $("#listaCats").innerHTML=CATS.map(c=>{const n=CONTAS.filter(x=>x.c===c.id).length;
+  const AQ=(ARQ||[]).filter(c=>!c.rep).sort((a,b)=>a.n.localeCompare(b.n,"pt-BR"));$("#arqBox").hidden=!AQ.length;$("#nArq").textContent=`${AQ.length} ${AQ.length===1?"conta":"contas"} · não contam em nenhum total`;
+  $("#listaArq").innerHTML=AQ.map(c=>`<li><div class="bill"><span class="nm"><i style="background:var(--muted)"></i><span>${esc(c.n)} <small>${esc(CATS.find(x=>x.id===c.c0)?.nome||"")}</small></span></span><span class="v">${brl.format(totAno(c))}</span><button class="btn sec" type="button" data-arq="${chave(c.n)}">Restaurar</button></div></li>`).join("");
+  $("#listaCats").innerHTML=CATS.map(c=>{const n=c.id==="arq"?nArq():CONTAS.filter(x=>x.c===c.id).length;
     return `<li><div class="bill"><span class="nm"><i style="background:var(${c.cor})"></i><span>${esc(c.nome)} <small>${n} ${n===1?"conta":"contas"}${c.custom?"":" · padrão"}</small></span></span>
       ${c.custom?`<button class="btn ${excluindo===c.id?"perigo":"sec"}" data-del="${c.id}">${excluindo===c.id?"Confirmar exclusão":"Excluir"}</button>`:`<span class="v">${brl0.format(totalCat(c.id))}</span>`}</div></li>`}).join("");
 }
@@ -1448,7 +1458,8 @@ $("#listaContas").addEventListener("click",(e)=>{const r=e.target.closest("[data
   const c=CONTAS.find(x=>!x.extra&&chave(x.n)===k);if(!c)return;let u=-1;c.v.forEach((x,i)=>{if(x>0)u=i});if(u<0||u>=NM-1)return;
   mudar(()=>{ORG.extras=[...ORG.extras,{id:"xrep"+k,n:c.n,c:c.c0||c.c,fixa:true,desde:u+1,valor:c.v[u],rep:true}]});
   msgSalvo(`${c.n} vai repetir ${brl.format(c.v[u])} todo mês a partir de ${nomeMesC(u+1).toLowerCase()}.`)});
-$("#listaContas").addEventListener("click",(e)=>{const b=e.target.closest("[data-arq]");if(!b)return;const c=CONTAS.find(x=>chave(x.n)===b.dataset.arq);if(c)mudar(()=>{ORG.atrib[b.dataset.arq]=c.c==="arq"?c.c0:"arq"})});
+document.addEventListener("click",(e)=>{const b=e.target.closest("#listaContas [data-arq],#listaArq [data-arq]");if(!b)return;const c=[...CONTAS,...(ARQ||[])].find(x=>chave(x.n)===b.dataset.arq);if(!c)return;const volta=c.c==="arq";
+  mudar(()=>{ORG.atrib[b.dataset.arq]=volta?(c.c0==="arq"?"outros":c.c0):"arq"});msgSalvo(volta?`${c.n} voltou para as contas.`:`${c.n} arquivada. Ela não aparece mais nas contas nem conta nos totais.`)});
 $("#listaCats").addEventListener("click",(e)=>{const b=e.target.closest("[data-del]");if(!b)return;const id=b.dataset.del;
   if(excluindo!==id){excluindo=id;renderContas();return}
   excluindo=null;mudar(()=>{ORG.cats=ORG.cats.filter(c=>c.id!==id);for(const k in ORG.atrib)if(ORG.atrib[k]===id)delete ORG.atrib[k]})});

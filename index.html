@@ -486,6 +486,21 @@ button.dono:hover{border-color:var(--ink-2);color:var(--ink)}
 .panel{grid-template-columns:minmax(0,1fr)}
 .salvo-ok{font-size:13px;color:var(--muted)}
 @media (max-width:860px){.savebar{bottom:calc(84px + env(safe-area-inset-bottom,0px))}.savebar div{width:100%;margin-left:0}.savebar .btn{flex:1;padding:10px 12px}}
+
+/* ===== Reservas (v37) ===== */
+.res{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.rcard{border:1px solid var(--line);border-radius:14px;padding:14px 16px;display:grid;gap:8px;align-content:start;min-width:0;background:var(--surface-2,transparent)}
+.rcard h4{margin:0;font-size:15px}
+.guard .rcard b.rs{font-size:clamp(24px,3.4vw,30px)}
+.rcard .acts{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-start;margin-left:0;width:auto}
+.rcard .acts .btn{padding:6px 12px;font-size:13px}
+.rcard form{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.rcard form .campo{flex:1;min-width:120px;max-width:none}
+.rmov{list-style:none;margin:0;padding:0;display:grid;gap:2px;font-size:13px;color:var(--muted)}
+.rmov li{display:flex;justify-content:space-between;gap:8px}
+.restot{font-size:14px;color:var(--muted)}
+.restot b{font-size:inherit!important;color:var(--ink)}
+@media (max-width:700px){.res{grid-template-columns:minmax(0,1fr)}}
 </style>
 
 <div class="app">
@@ -1559,7 +1574,7 @@ function renderCasa(){const el=$("#casaView");if(!el||!CASA_P.length)return;
   const meses=Array.from({length:NM},(_,i)=>i).filter(i=>P.some(p=>p.entrou[i]||p.saiu[i]||p.inv[i]));
   if(!meses.includes(casaSel))casaSel=meses.find(i=>i>=MES_ATUAL)??meses[meses.length-1]??MES_ATUAL;
   const i=casaSel, juntos=soma("sobra",i), inv=soma("inv",i);
-  const g=CASA_DOC&&CASA_DOC.guardado!=null&&isFinite(Number(CASA_DOC.guardado))?Number(CASA_DOC.guardado):null, em=g!=null?Number(CASA_DOC.em)||0:MES_ATUAL;
+  const RS=reservas(), g=RS?RES_IDS.reduce((a,id)=>a+RS[id].saldo,0):CASA_DOC&&CASA_DOC.guardado!=null&&isFinite(Number(CASA_DOC.guardado))?Number(CASA_DOC.guardado):null, em=g!=null?Number(CASA_DOC.em)||0:MES_ATUAL;
   const PL=planos(), pl=(k)=>PL.filter(x=>x.on!==false).reduce((a,x)=>a+parcelaEm(x,k),0), LIXO={...(PV().lixo||{})};
   for(const [ck,rs] of Object.entries(PV().corte||{}))for(const r of [].concat(rs))for(let k=Number(r.de);k<=(r.ate==null?NM-1:Number(r.ate));k++)LIXO[ck+"|"+k]=true;
   const FORA={...(PV().fora||{}),...LIXO};
@@ -1575,12 +1590,7 @@ function renderCasa(){const el=$("#casaView");if(!el||!CASA_P.length)return;
   const ano=meses.filter(k=>k<12), sAno=(k)=>ano.reduce((a,j)=>a+soma(k,j),0);
   $("#casaSub").textContent=`${P.map(p=>p.nome).join(" e ")}, juntos e separados.`;
   el.innerHTML=`
-    <section class="panel guard" aria-labelledby="gT">
-      <div class="panel-head"><h3 id="gT">Quanto temos guardado</h3>${!casaEdit?`<button class="btn sec" type="button" id="gEdit">${g==null?"Informar":"Atualizar"}</button>`:""}</div>
-      ${casaEdit?`<form id="gForm"><input class="campo" id="gVal" inputmode="decimal" placeholder="10.000,00" aria-label="Valor guardado hoje" value="${g!=null?String(g).replace(".",","):""}" autocomplete="off"><button class="btn" type="submit">Salvar</button><button class="btn sec" type="button" id="gCanc">Cancelar</button></form><p class="sub">Some poupança, reserva e investimentos dos dois, como estão hoje.</p>`
-      :g==null?`<p class="sub">Informe quanto vocês têm guardado hoje (reserva, poupança e investimentos) para ver a projeção do ano.</p>`
-      :`<b>${brl.format(g)}</b><p class="sub">Informado em ${CASA_DOC.data?new Date(CASA_DOC.data).toLocaleDateString("pt-BR"):nomeMesC(em).toLowerCase()}${ult26!=null?`. Guardando tudo que sobra e o que investem, em ${nomeMes(ult26).toLowerCase()} vocês terão <b style="font-size:inherit">${brl.format(prev[ult26])}</b>.`:"."}</p>`}
-    </section>
+    ${painelReservas(g,ult26,prev,soma)}
     <section class="panel" aria-labelledby="cmT">
       <div class="panel-head"><h3 id="cmT">${nomeMes(i)}</h3><span class="sub">Escolha o mês</span></div>
       <div class="chips" role="group" aria-label="Mês">${meses.map(k=>`<button class="chip" type="button" data-cmes="${k}" aria-pressed="${k===i}">${k<12?MESES[k].slice(0,3):MESES[k-12].slice(0,3)+"/27"}</button>`).join("")}</div>
@@ -1602,9 +1612,11 @@ function renderCasa(){const el=$("#casaView");if(!el||!CASA_P.length)return;
 }
 $("#casaView").addEventListener("click",(e)=>{
   const c=e.target.closest("[data-cmes]");if(c){casaSel=Number(c.dataset.cmes);if(casaSel>=MES_ATUAL)plRasc.mes=String(casaSel);renderCasa();const b=$("#casaView").querySelector(`[data-cmes="${casaSel}"]`);if(b)b.focus();return}
+  const rb=e.target.closest("[data-res]");if(rb){resForm={id:rb.dataset.res,op:rb.dataset.op};renderCasa();const f=$("#resVal");if(f)f.focus();return}
+  if(e.target.closest("[data-rescanc]")){resForm=null;renderCasa();return}
   if(e.target.closest("#gEdit")){casaEdit=true;renderCasa();$("#gVal").focus();return}
   if(e.target.closest("#gCanc")){casaEdit=false;renderCasa()}});
-$("#casaView").addEventListener("submit",async(e)=>{e.preventDefault();if(e.target.id==="plForm"){addPlano();return}const v=numBR($("#gVal").value);
+$("#casaView").addEventListener("submit",async(e)=>{e.preventDefault();if(e.target.id==="plForm"){addPlano();return}if(e.target.id==="resForm"){salvarRes();return}const v=numBR($("#gVal").value);
   if(!isFinite(v)||v<0){msgSalvo("Digite o valor como 10.000,00.",true);$("#gVal").focus();return}
   CASA_DOC={...(CASA_DOC||{}),guardado:v,em:MES_ATUAL,data:new Date().toISOString(),rev:Date.now()};casaEdit=false;try{localStorage.setItem("gs26:casa",JSON.stringify(CASA_DOC))}catch(_){}renderCasa();
   try{if(dbApi)await dbApi.doc("config/casa").set(CASA_DOC);msgSalvo(`Guardado atualizado para ${brl.format(v)}.`,true)}catch(_){msgSalvo("Sem conexão: o valor ficou salvo neste aparelho.",true)}});
@@ -1725,6 +1737,41 @@ function salvarOficial(){const M=casaSel,d=PV();
     const rs=corte[ck]||[];if(!rs.some(r=>Number(r.de)<=M&&(r.ate==null||Number(r.ate)>=M)))corte[ck]=[...rs,{de:M,ate:null}];delete src[key]}
   CASA_DOC={...(CASA_DOC||{}),planos:pls,fora,lixo,corte,oficial:{desde:M,data:new Date().toISOString()}};PLR=null;try{localStorage.removeItem("gs26:casaRasc")}catch(_){}
   salvarCasa(`Planejamento de ${nomeMesC(M).toLowerCase()} salvo como oficial. Ele segue nos próximos meses até vocês salvarem outro.`)}
+
+// ===== Reservas da casa (v37) =====
+// config/casa.reservas = {emerg:{saldo,meta,mov:[{d,v}]}, casa:{...}}. Salva na hora, fora do rascunho do planejador.
+const RES_IDS=["emerg","casa"], RES_NOME={emerg:"Emergência",casa:"Reserva da Casa"};
+let resForm=null;
+function reservas(){const r=CASA_DOC?.reservas;if(!r||typeof r!=="object")return null;
+  return Object.fromEntries(RES_IDS.map(id=>{const x=r[id]||{};return [id,{saldo:Number(x.saldo)||0,meta:Number(x.meta)>0?Number(x.meta):0,mov:Array.isArray(x.mov)?x.mov:[]}]}))}
+function painelReservas(g,ult26,prev,soma){
+  const RS=reservas()||Object.fromEntries(RES_IDS.map(id=>[id,{saldo:0,meta:0,mov:[]}]));
+  const contas=soma("saiu",MES_ATUAL), dt=(d)=>{try{return new Date(d).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"})}catch(_){return ""}};
+  const card=(id)=>{const r=RS[id],f=resForm&&resForm.id===id?resForm.op:null,pct=r.meta?Math.min(100,Math.round(r.saldo/r.meta*100)):0;
+    return `<div class="rcard"><h4>${RES_NOME[id]}</h4><b class="rs">${brl.format(r.saldo)}</b>
+      ${r.meta?`<div class="meter"><div class="track" role="img" aria-label="${pct}% da meta"><i style="width:${pct}%;background:var(--accent)"></i></div>
+        <span class="sub">${r.saldo>=r.meta?`Meta de ${brl.format(r.meta)} batida`:`${pct}% de ${brl.format(r.meta)} · faltam ${brl.format(r.meta-r.saldo)}`}</span></div>`
+      :`<span class="sub">${id==="emerg"&&contas>0?`Ideal: 6 meses de contas, cerca de ${brl0.format(contas*6)}.`:"Defina uma meta para acompanhar."}</span>`}
+      ${f?`<form id="resForm"><input class="campo" id="resVal" inputmode="decimal" placeholder="${f==="meta"?"10.000,00":"500,00"}" aria-label="${f==="in"?"Valor para guardar":f==="out"?"Valor para retirar":"Meta"} em ${RES_NOME[id]}" value="${f==="meta"&&r.meta?String(r.meta).replace(".",","):""}" autocomplete="off">
+        <button class="btn" type="submit">${f==="in"?"Guardar":f==="out"?"Retirar":"Salvar meta"}</button><button class="btn sec" type="button" data-rescanc>Cancelar</button></form>`
+      :`<div class="acts"><button class="btn" type="button" data-res="${id}" data-op="in">Guardar</button><button class="btn sec" type="button" data-res="${id}" data-op="out"${r.saldo>0?"":" disabled"}>Retirar</button><button class="btn sec" type="button" data-res="${id}" data-op="meta">${r.meta?"Mudar meta":"Meta"}</button></div>`}
+      ${r.mov.length?`<ul class="rmov" aria-label="Últimos movimentos">${r.mov.slice(-3).reverse().map(m=>`<li><span>${dt(m.d)}</span><span>${m.v>=0?"+":"−"} ${brl.format(Math.abs(m.v))}</span></li>`).join("")}</ul>`:""}
+    </div>`};
+  return `<section class="panel guard" aria-labelledby="gT">
+      <div class="panel-head"><h3 id="gT">Reservas</h3><span class="restot">Total guardado <b>${brl.format(g??0)}</b></span></div>
+      <div class="res">${RES_IDS.map(card).join("")}</div>
+      ${ult26!=null&&g!=null?`<p class="sub">Guardando tudo que sobra e o que investem, em ${nomeMes(ult26).toLowerCase()} vocês terão <b style="font-size:inherit">${brl.format(prev[ult26])}</b>.</p>`:""}
+    </section>`}
+function salvarRes(){const f=resForm;if(!f)return;const v=numBR($("#resVal").value);
+  if(!isFinite(v)||v<=0){msgSalvo("Digite o valor como 500,00.",true);$("#resVal").focus();return}
+  const base=reservas()||Object.fromEntries(RES_IDS.map(id=>[id,{saldo:id==="emerg"&&Number(CASA_DOC?.guardado)>0?Number(CASA_DOC.guardado):0,meta:0,mov:[]}]));
+  const r={...base[f.id]},nome=RES_NOME[f.id];let t;
+  if(f.op==="meta"){r.meta=v;t=`Meta de ${nome} em ${brl.format(v)}.`}
+  else{if(f.op==="out"&&v>r.saldo+0.004){msgSalvo(`${nome} tem só ${brl.format(r.saldo)}.`,true);$("#resVal").focus();return}
+    const d=f.op==="in"?v:-v;r.saldo=Math.round((r.saldo+d)*100)/100;r.mov=[...r.mov,{d:new Date().toISOString(),v:d}].slice(-50);
+    t=`${f.op==="in"?"Guardado":"Retirado"} ${brl.format(v)} ${f.op==="in"?"em":"de"} ${nome}.`}
+  resForm=null;CASA_DOC={...(CASA_DOC||{}),reservas:{...base,[f.id]:r},em:MES_ATUAL,data:new Date().toISOString()};
+  CASA_DOC.guardado=RES_IDS.reduce((a,id)=>a+CASA_DOC.reservas[id].saldo,0);salvarCasa(t)}
 const chaveLocal=()=>PERFIL==="gabriel"?"gs26:org":"gs26:org:"+PERFIL;
 const docDe=(id)=>id==="gabriel"?"config/organizacao":"config/perfil-"+id;
 let dbApi=null, orgUnsub=null;
